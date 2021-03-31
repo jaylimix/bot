@@ -11,13 +11,13 @@
 
 **About**
 
-bot.rb opens new positions and creates 1 stop loss and 10 take profits.
+bot.rb - Opens new positions and creates 1 stop loss and 10 take profits.
 
-adjust.rb move the stop loss to entry price when first take profit is hit.
+adjust.rb - Moves the stop loss to entry price when first take profit is hit.
 
-coin_quantity_cap lets you define the pairs you want to trade, their quantity, and price decimals. Must provide correct decimals, otherwise API rejects order.
+coin_quantity_cap - Lets you define the pairs you want to trade, their quantity, and price decimals. Must provide correct decimals, otherwise API rejects order.
 
-long_positions and short_positions folder ensures that pairs that lost money in the same hour do not get trigger again within the same hour.
+long_positions and short_positions - CSV files that ensures that pairs that lost money in the same hour do not get trigger again within the same hour. This is like a database.
 
 
 
