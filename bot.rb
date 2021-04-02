@@ -48,6 +48,10 @@ for cqc in $coin_quantity_cap
         next
     end
 
+    if klines.count != 100
+        next
+    end
+
     $type = 'GET'
 
     $end_point = '/fapi/v2/positionRisk'
