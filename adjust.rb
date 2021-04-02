@@ -107,6 +107,10 @@ for taf in true_and_false
                         next
                     end
 
+                    if position_risk[0]['positionAmt'].to_i == 0
+                        next
+                    end
+
                     $position_entry_price = position_risk[0]['entryPrice']
 
                     new_order_id = adjust_stop_loss()
