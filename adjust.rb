@@ -7,128 +7,132 @@ require_relative 'coin_quantity_cap'
 
 END{
 
-true_and_false = [true, false]
+loop do
 
-$extra = ''
+    true_and_false = [true, false]
 
-for taf in true_and_false
+    $extra = ''
 
-    $long = taf
+    for taf in true_and_false
 
-    $interval = '1h'
+        $long = taf
 
-    for cqc in $coin_quantity_cap
+        $interval = '1h'
 
-        $pair = cqc[0]
+        for cqc in $coin_quantity_cap
 
-        quantity = cqc[1]
+            $pair = cqc[0]
 
-        $cap = cqc[2]
+            quantity = cqc[1]
 
-        # if $pair != 'OMG'
-            # next
-        # end
+            $cap = cqc[2]
 
-        if $long
+            # if $pair != 'OMG'
+                # next
+            # end
 
-            $file_name = 'long_positions/' + $pair + '.csv'
+            if $long
 
-        else
+                $file_name = 'long_positions/' + $pair + '.csv'
 
-            $file_name = 'short_positions/' + $pair + '.csv'
+            else
 
-        end
+                $file_name = 'short_positions/' + $pair + '.csv'
 
-        #################
-        # Get Open Orders
-        #################
+            end
 
-        $type = 'GET'
+            #################
+            # Get Open Orders
+            #################
 
-        $end_point = '/fapi/v1/openOrders'
+            $type = 'GET'
 
-        $open_orders = execute()
+            $end_point = '/fapi/v1/openOrders'
 
-        if $open_orders == 'error' || $open_orders.include?('code') || $open_orders.empty?
-            # print_out('cannot get open orders for ' + $pair)
-            next
-        end
+            $open_orders = execute()
 
-        ########################################
-        # Adjust stop loss to become entry price
-        ########################################
+            if $open_orders == 'error' || $open_orders.include?('code') || $open_orders.empty?
+                # print_out('cannot get open orders for ' + $pair)
+                next
+            end
 
-        if $open_orders.count >= 11 # sometimes api returns 22 which doesn't make sense
+            ########################################
+            # Adjust stop loss to become entry price
+            ########################################
 
-            next
+            if $open_orders.count >= 11 # sometimes api returns 22 which doesn't make sense
 
-        end
+                next
 
-        for open_order in $open_orders
+            end
 
-            if open_order['type'] == 'STOP_MARKET'
+            for open_order in $open_orders
 
-                if File.exist?($file_name)
-    
-                    row = CSV.read($file_name)
+                if open_order['type'] == 'STOP_MARKET'
 
-                    if row[0][1].to_s == ''
+                    if File.exist?($file_name)
+        
+                        row = CSV.read($file_name)
 
-                        $old_order_id = open_order['orderId'].to_s
+                        if row[0][1].to_s == ''
 
-                    else
+                            $old_order_id = open_order['orderId'].to_s
 
-                        $old_order_id = row[0][1].to_s
-                        
-                        if $old_order_id == open_order['orderId'].to_s
+                        else
 
-                            break
+                            $old_order_id = row[0][1].to_s
+                            
+                            if $old_order_id == open_order['orderId'].to_s
+
+                                break
+
+                            end
 
                         end
 
                     end
 
-                end
+                    ###############
+                    # Get Positions
+                    ###############
 
-                ###############
-                # Get Positions
-                ###############
+                    $type = 'GET'
 
-                $type = 'GET'
+                    $end_point = '/fapi/v2/positionRisk'
 
-                $end_point = '/fapi/v2/positionRisk'
+                    position_risk = execute()
 
-                position_risk = execute()
+                    if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
+                        # print_out('cannot get position risk for ' + $pair)
+                        next
+                    end
 
-                if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
-                    # print_out('cannot get position risk for ' + $pair)
-                    next
-                end
+                    if position_risk[0]['positionAmt'].to_i == 0
+                        next
+                    end
 
-                if position_risk[0]['positionAmt'].to_i == 0
-                    next
-                end
+                    $position_entry_price = position_risk[0]['entryPrice']
 
-                $position_entry_price = position_risk[0]['entryPrice']
+                    new_order_id = adjust_stop_loss()
 
-                new_order_id = adjust_stop_loss()
+                    if new_order_id == 'empty' || new_order_id == 'error'
 
-                if new_order_id == 'empty' || new_order_id == 'error'
+                        print_out(new_order_id)
 
-                    print_out(new_order_id)
+                        break
 
-                    break
+                    end
 
-                end
+                    CSV.open($file_name, "wb") do |csv|
 
-                CSV.open($file_name, "wb") do |csv|
-
-                    csv << [ Time.now.strftime('%Y-%m-%d %H'), new_order_id ]
-            
+                        csv << [ Time.now.strftime('%Y-%m-%d %H'), new_order_id ]
+                
+                    end
                 end
             end
         end
     end
+
 end
 }
 

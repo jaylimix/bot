@@ -7,405 +7,430 @@ require_relative 'coin_quantity_cap'
 
 END{
 
-$long = true
+$long = get_terminal_input()
 
-$interval = '1h'
+loop do
 
-for cqc in $coin_quantity_cap
+    $interval = '1h'
 
-    $pair = cqc[0]
+    for cqc in $coin_quantity_cap
 
-    quantity = cqc[1]
+        $pair = cqc[0]
 
-    $cap = cqc[2]
+        quantity = cqc[1]
 
-    # if $pair != 'OMG'
-        # next
-    # end
+        $cap = cqc[2]
 
-    $time_now = Time.now.strftime('%Y-%m-%d %H')
+        # if $pair != 'OMG'
+            # next
+        # end
 
-    if $long
+        $time_now = Time.now.strftime('%Y-%m-%d %H')
 
-        $file_name = 'long_positions/' + $pair + '.csv'
+        if $long
 
-    else
+            $file_name = 'long_positions/' + $pair + '.csv'
 
-        $file_name = 'short_positions/' + $pair + '.csv'
+        else
 
-    end
-
-    $type = 'GET'
-
-    $end_point = '/fapi/v1/klines'
-
-    $extra = '&interval=' + $interval + '&limit=100'
-
-    klines = execute()
-
-    if klines.empty? || klines == 'error' || klines.include?('code')
-        # print_out('cannot get klines for ' + $pair)
-        next
-    end
-
-    if klines.count != 100
-        next
-    end
-
-    $type = 'GET'
-
-    $end_point = '/fapi/v2/positionRisk'
-
-    position_risk = execute()
-
-    if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
-        # print_out('cannot get position risk for ' + $pair)
-        next
-    end
-
-    key_of_current_bar = klines.count - 1
-
-    previous_bar_key = klines.count - 2
-
-    total_diff = 0
-    
-    number_of_candles = klines.count - 50
-
-    until previous_bar_key == number_of_candles do
-        high = klines[previous_bar_key][2].to_f
-        low = klines[previous_bar_key][3].to_f
-        diff = high - low
-        total_diff += diff
-        previous_bar_key -= 1
-    end
-
-    $average_range =  (total_diff / number_of_candles).to_f
-
-    position_amount = (position_risk[0]['positionAmt']).to_f
-
-    ##################
-    # Get Ticker Price
-    ##################
-
-    $type = 'GET'
-
-    $end_point = '/fapi/v1/ticker/price'
-
-    ticker_array = execute()
-
-    if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
-        # print_out('cannot get ticker price for ' + $pair)
-        next
-    end
-
-    $ticker_price = (ticker_array['price']).to_f
-
-    ###########################
-    # CHECK FOR ANY OPEN ORDERS
-    ###########################
-
-    $type = 'GET'
-
-    $end_point = '/fapi/v1/openOrders'
-
-    $open_orders = execute()
-
-    if $open_orders == 'error' || $open_orders.include?('code')
-        # print_out('cannot get open orders for ' + $pair)
-        next
-    end
-
-    #############################################
-    # Set Stop Loss, Take Profit, Global Quantity
-    #############################################
-
-    start = 0
-
-    $initial_multiplier = 0.5
-    
-    if $long
-
-        $tp_price = $ticker_price + $average_range * $initial_multiplier
-
-        $stop_price = $ticker_price - $average_range
-
-    else
-
-        $tp_price = $ticker_price - $average_range * $initial_multiplier
-
-        $stop_price = $ticker_price + $average_range
-
-    end
-
-    $tp_price = $tp_price.to_s[0, $cap]
-
-    $stop_price = $stop_price.to_s[0, $cap]
-
-    $quantity = (quantity / 10.0)
-
-    if position_amount == 0
-
-        ###########################
-        # Delete stop market orders
-        ###########################
-        
-        if $open_orders.count == 1
-
-            $type = 'DELETE'
-
-            $end_point = '/fapi/v1/allOpenOrders'
-            
-            print_out( $pair )
-
-            puts execute()
+            $file_name = 'short_positions/' + $pair + '.csv'
 
         end
 
-        ###################################################
-        # Check whether position is opened in the same hour
-        ###################################################
+        $type = 'GET'
 
-        if File.exist?($file_name)
+        $end_point = '/fapi/v1/klines'
+
+        $extra = '&interval=' + $interval + '&limit=100'
+
+        klines = execute()
+
+        if klines.empty? || klines == 'error' || klines.include?('code')
+            # print_out('cannot get klines for ' + $pair)
+            next
+        end
+
+        if klines.count != 100
+            next
+        end
+
+        $type = 'GET'
+
+        $end_point = '/fapi/v2/positionRisk'
+
+        position_risk = execute()
+
+        if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
+            # print_out('cannot get position risk for ' + $pair)
+            next
+        end
+
+        key_of_current_bar = klines.count - 1
+
+        previous_bar_key = klines.count - 2
+
+        total_diff = 0
         
-            row = CSV.read($file_name)
+        number_of_candles = klines.count - 50
 
-            if Time.now.strftime('%Y-%m-%d %H') == row[0][0].to_s
+        until previous_bar_key == number_of_candles do
+            high = klines[previous_bar_key][2].to_f
+            low = klines[previous_bar_key][3].to_f
+            diff = high - low
+            total_diff += diff
+            previous_bar_key -= 1
+        end
+
+        $average_range =  (total_diff / number_of_candles).to_f
+
+        position_amount = (position_risk[0]['positionAmt']).to_f
+
+        ##################
+        # Get Ticker Price
+        ##################
+
+        $type = 'GET'
+
+        $end_point = '/fapi/v1/ticker/price'
+
+        ticker_array = execute()
+
+        if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
+            # print_out('cannot get ticker price for ' + $pair)
+            next
+        end
+
+        $ticker_price = (ticker_array['price']).to_f
+
+        ###########################
+        # CHECK FOR ANY OPEN ORDERS
+        ###########################
+
+        $type = 'GET'
+
+        $end_point = '/fapi/v1/openOrders'
+
+        $open_orders = execute()
+
+        if $open_orders == 'error' || $open_orders.include?('code')
+            # print_out('cannot get open orders for ' + $pair)
+            next
+        end
+
+        #############################################
+        # Set Stop Loss, Take Profit, Global Quantity
+        #############################################
+
+        start = 0
+
+        $initial_multiplier = 0.5
+        
+        if $long
+
+            $tp_price = $ticker_price + $average_range * $initial_multiplier
+
+            $stop_price = $ticker_price - $average_range
+
+        else
+
+            $tp_price = $ticker_price - $average_range * $initial_multiplier
+
+            $stop_price = $ticker_price + $average_range
+
+        end
+
+        $tp_price = $tp_price.to_s[0, $cap]
+
+        $stop_price = $stop_price.to_s[0, $cap]
+
+        $quantity = (quantity / 10.0)
+
+        if position_amount == 0
+
+            ###########################
+            # Delete stop market orders
+            ###########################
+            
+            if $open_orders.count == 1
+
+                $type = 'DELETE'
+
+                $end_point = '/fapi/v1/allOpenOrders'
+                
+                print_out( $pair )
+
+                puts execute()
+
+            end
+
+            ###################################################
+            # Check whether position is opened in the same hour
+            ###################################################
+
+            if File.exist?($file_name)
+            
+                row = CSV.read($file_name)
+
+                if Time.now.strftime('%Y-%m-%d %H') == row[0][0].to_s
+
+                    next
+
+                end
+        
+            end
+
+            ##################################
+            # CHECK IF HAMMER OR SHOOTING STAR
+            ##################################
+
+            is_hammer = false
+
+            key_of_previous_bar = klines.count - 2
+
+            open_of_previous_bar = klines[key_of_previous_bar][1]
+
+            high_of_previous_bar = klines[key_of_previous_bar][2]
+
+            low_of_previous_bar = klines[key_of_previous_bar][3]
+
+            close_of_previous_bar = klines[key_of_previous_bar][4]
+
+            green_candle = false
+
+            red_candle = false
+
+            if close_of_previous_bar.to_f > open_of_previous_bar.to_f
+
+                green_candle = true
+
+            else
+
+                red_candle = true
+
+            end
+
+            if $long && green_candle
+                
+                diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
+
+                if diff_of_open_vs_low / diff_of_high_vs_open > 1
+
+                    is_hammer = true
+                    
+                end
+
+            end
+
+            if $long && red_candle
+
+                diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
+
+                if diff_of_close_vs_low / diff_of_high_vs_close > 1
+
+                    is_hammer = true
+
+                end
+
+            end
+
+            if !$long && green_candle
+                
+                diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
+
+                diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                if diff_of_high_vs_close / diff_of_close_vs_low > 1
+
+                    is_hammer = true
+
+                end
+
+            end
+
+            if !$long && red_candle
+
+                diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
+
+                diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                if diff_of_high_vs_open / diff_of_open_vs_low > 1
+
+                    is_hammer = true
+
+                end
+
+            end
+
+            if !is_hammer
 
                 next
 
             end
-    
-        end
 
-        ##################################
-        # CHECK IF HAMMER OR SHOOTING STAR
-        ##################################
+            #############################################
+            # Check higher or lower than previous candles
+            #############################################
 
-        is_hammer = false
+            key_of_previous_bar = klines.count - 2
 
-        key_of_previous_bar = klines.count - 2
+            high_of_previous_bar = (klines[key_of_previous_bar][2]).to_f
 
-        open_of_previous_bar = klines[key_of_previous_bar][1]
+            low_of_previous_bar = (klines[key_of_previous_bar][3]).to_f
 
-        high_of_previous_bar = klines[key_of_previous_bar][2]
+            count_compare_highest_lowest = 0
 
-        low_of_previous_bar = klines[key_of_previous_bar][3]
+            until key_of_previous_bar == 0 do
 
-        close_of_previous_bar = klines[key_of_previous_bar][4]
+                key_of_previous_bar -= 1
 
-        green_candle = false
+                if $long
 
-        red_candle = false
+                    side = 'BUY'
 
-        if close_of_previous_bar.to_f > open_of_previous_bar.to_f
+                    low_of_previous_previous_bar = klines[key_of_previous_bar][3].to_f
 
-            green_candle = true
+                    if low_of_previous_bar < low_of_previous_previous_bar
 
-        else
+                        count_compare_highest_lowest += 1
 
-            red_candle = true
+                    else
 
-        end
+                        break
 
-        if $long && green_candle
-            
-            diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-            diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
-
-            if diff_of_open_vs_low / diff_of_high_vs_open > 1
-
-                is_hammer = true
-                
-            end
-
-        end
-
-        if $long && red_candle
-
-            diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-            diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
-
-            if diff_of_close_vs_low / diff_of_high_vs_close > 1
-
-                is_hammer = true
-
-            end
-
-        end
-
-        if !$long && green_candle
-            
-            diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
-
-            diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-            if diff_of_high_vs_close / diff_of_close_vs_low > 1
-
-                is_hammer = true
-
-            end
-
-        end
-
-        if !$long && red_candle
-
-            diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
-
-            diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-            if diff_of_high_vs_open / diff_of_open_vs_low > 1
-
-                is_hammer = true
-
-            end
-
-        end
-
-        if !is_hammer
-
-            next
-
-        end
-
-        #############################################
-        # Check higher or lower than previous candles
-        #############################################
-
-        key_of_previous_bar = klines.count - 2
-
-        high_of_previous_bar = (klines[key_of_previous_bar][2]).to_f
-
-        low_of_previous_bar = (klines[key_of_previous_bar][3]).to_f
-
-        count_compare_highest_lowest = 0
-
-        until key_of_previous_bar == 0 do
-
-            key_of_previous_bar -= 1
-
-            if $long
-
-                side = 'BUY'
-
-                low_of_previous_previous_bar = klines[key_of_previous_bar][3].to_f
-
-                if low_of_previous_bar < low_of_previous_previous_bar
-
-                    count_compare_highest_lowest += 1
+                    end
 
                 else
 
-                    break
+                    side = 'SELL'
 
+                    high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
+
+                    if high_of_previous_bar > high_of_previous_previous_bar
+
+                        count_compare_highest_lowest += 1
+
+                    else
+
+                        break
+
+                    end
+
+                end
+                
+            end
+
+            if count_compare_highest_lowest > 60 || count_compare_highest_lowest < 20
+                
+                next
+
+            end
+
+            #####################################
+            # Pass criterias, open a new position
+            #####################################
+        
+            $type = 'POST'
+        
+            $end_point = '/fapi/v1/order'
+        
+            $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
+        
+            result = execute()
+
+            if result.include?('orderId')
+
+                create_stop_loss()
+            
+                until start == 10 do
+
+                    if $long
+
+                        $tp_price = $ticker_price + $average_range * $initial_multiplier
+            
+                    else
+            
+                        $tp_price = $ticker_price - $average_range * $initial_multiplier
+            
+                    end
+
+                    create_take_profit()
+            
+                    $initial_multiplier += 1
+            
+                    start += 1
+            
                 end
 
             else
 
-                side = 'SELL'
+                print_out($pair)
 
-                high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
-
-                if high_of_previous_bar > high_of_previous_previous_bar
-
-                    count_compare_highest_lowest += 1
-
-                else
-
-                    break
-
-                end
+                puts result
 
             end
-            
-        end
-
-        if count_compare_highest_lowest > 60 || count_compare_highest_lowest < 20
-            
-            next
-
-        end
-
-        #####################################
-        # Pass criterias, open a new position
-        #####################################
-    
-        $type = 'POST'
-    
-        $end_point = '/fapi/v1/order'
-    
-        $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
-    
-        result = execute()
-
-        if result.include?('orderId')
-
-            create_stop_loss()
         
-            until start == 10 do
-
-                if $long
-
-                    $tp_price = $ticker_price + $average_range * $initial_multiplier
-        
-                else
-        
-                    $tp_price = $ticker_price - $average_range * $initial_multiplier
-        
-                end
-
-                create_take_profit()
-        
-                $initial_multiplier += 1
-        
-                start += 1
-        
-            end
-
         else
 
-            print_out($pair)
+            ####################################################
+            # Create stop loss and take profit if file not found
+            ####################################################
 
-            puts result
+            if !File.exist?($file_name)
 
-        end
-    
-    else
+                create_stop_loss()
 
-        ####################################################
-        # Create stop loss and take profit if file not found
-        ####################################################
+                until start == 10 do
 
-        if !File.exist?($file_name)
+                    if $long
 
-            create_stop_loss()
+                        $tp_price = $ticker_price + $average_range * $initial_multiplier
+            
+                    else
+            
+                        $tp_price = $ticker_price - $average_range * $initial_multiplier
+            
+                    end
 
-            until start == 10 do
+                    create_take_profit()
 
-                if $long
-
-                    $tp_price = $ticker_price + $average_range * $initial_multiplier
-        
-                else
-        
-                    $tp_price = $ticker_price - $average_range * $initial_multiplier
-        
+                    $initial_multiplier += 1
+            
+                    start += 1
+            
                 end
 
-                create_take_profit()
-
-                $initial_multiplier += 1
-        
-                start += 1
-        
             end
 
         end
-
     end
 end
 }
+
+def get_terminal_input()
+
+    puts 'Long or Short? (l or s)'
+
+    long_or_short = gets.chomp
+
+    if long_or_short == 'l'
+
+        return true
+
+    elsif long_or_short == 's'
+
+        return false
+
+    else
+        
+        get_terminal_input()
+
+    end
+
+end
 
 def print_out(msg)
     puts ''
