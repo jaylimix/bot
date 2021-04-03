@@ -13,6 +13,8 @@ loop do
 
     $interval = '1h'
 
+    $extra = ''
+
     for cqc in $coin_quantity_cap
 
         $pair = cqc[0]
@@ -37,6 +39,35 @@ loop do
 
         end
 
+        ##################
+        # Get Ticker Price
+        ##################
+
+        $type = 'GET'
+
+        $end_point = '/fapi/v1/ticker/price'
+
+        ticker_array = execute()
+
+        if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
+            # print_out('cannot get ticker price for ' + $pair)
+            next
+        end
+
+        $ticker_price = (ticker_array['price']).to_f
+
+        if $ticker_price * quantity > 50
+
+            print_out($pair + ' need to readjust quantity because position is now more than $50')
+
+            next
+
+        end
+
+        ############
+        # Get Klines
+        ############
+
         $type = 'GET'
 
         $end_point = '/fapi/v1/klines'
@@ -53,6 +84,10 @@ loop do
         if klines.count != 100
             next
         end
+
+        ##########################
+        # Get Position Information
+        ##########################
 
         $type = 'GET'
 
@@ -84,23 +119,6 @@ loop do
         $average_range =  (total_diff / number_of_candles).to_f
 
         position_amount = (position_risk[0]['positionAmt']).to_f
-
-        ##################
-        # Get Ticker Price
-        ##################
-
-        $type = 'GET'
-
-        $end_point = '/fapi/v1/ticker/price'
-
-        ticker_array = execute()
-
-        if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
-            # print_out('cannot get ticker price for ' + $pair)
-            next
-        end
-
-        $ticker_price = (ticker_array['price']).to_f
 
         ###########################
         # CHECK FOR ANY OPEN ORDERS
