@@ -430,7 +430,7 @@ end
 
 def get_terminal_input()
 
-    puts 'Long or Short? (l or s)'
+    print 'Long or Short? (l or s) '
 
     long_or_short = gets.chomp
 
