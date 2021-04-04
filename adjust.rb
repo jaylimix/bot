@@ -107,7 +107,7 @@ loop do
                         next
                     end
 
-                    if position_risk[0]['positionAmt'].to_i == 0
+                    if position_risk[0]['positionAmt'].to_f == 0.0
                         next
                     end
 
