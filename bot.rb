@@ -56,11 +56,15 @@ loop do
 
         $ticker_price = (ticker_array['price']).to_f
 
-        if $ticker_price * quantity > 50
+        if $ticker_price * quantity > 60
 
-            print_out($pair + ' need to readjust quantity because position is now more than $50')
+            print_out($pair + ' need to readjust quantity because MORE than $60')
 
-            next
+        end
+
+        if $ticker_price * quantity < 20
+
+            print_out($pair + ' need to readjust quantity because LESS than $20')
 
         end
 

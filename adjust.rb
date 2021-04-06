@@ -60,7 +60,7 @@ loop do
             # Adjust stop loss to become entry price
             ########################################
 
-            if $open_orders.count >= 11 # sometimes api returns 22 which doesn't make sense
+            if $open_orders.count >= 11 # sometimes api returns wrong value such as 22 and 4 which is incorrect
 
                 next
 
