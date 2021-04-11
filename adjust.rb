@@ -60,7 +60,7 @@ loop do
             # Adjust stop loss to become entry price
             ########################################
 
-            if $open_orders.count >= 11 # sometimes api returns wrong value such as 22 and 4 which is incorrect
+            if $open_orders.count >= 11 # API often returns wrong value causes adjustment of the stop loss too soon
 
                 next
 
@@ -81,7 +81,7 @@ loop do
                         else
 
                             $old_order_id = row[0][1].to_s
-                            
+
                             if $old_order_id == open_order['orderId'].to_s
 
                                 break
