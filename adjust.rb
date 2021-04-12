@@ -113,21 +113,8 @@ loop do
 
                     $position_entry_price = position_risk[0]['entryPrice']
 
-                    new_order_id = adjust_stop_loss()
+                    adjust_stop_loss()
 
-                    if new_order_id == 'empty' || new_order_id == 'error'
-
-                        print_out(new_order_id)
-
-                        break
-
-                    end
-
-                    CSV.open($file_name, "wb") do |csv|
-
-                        csv << [ Time.now.strftime('%Y-%m-%d %H'), new_order_id ]
-                
-                    end
                 end
             end
         end
@@ -209,31 +196,34 @@ def adjust_stop_loss()
 
     if result.empty?
         
-        return 'empty'
+        puts $pair
+        puts 'empty'
 
     elsif result == 'error'
 
-        return 'error'
+        puts $pair
+        puts 'error'
 
     elsif result.has_key?('code')
 
-        print_out($pair)
-
+        puts $pair
         puts result
 
-        puts ''
-
-        puts 'open orders count is: ' + $open_orders.count.to_s
-
-        $cap -= 1
-
-        adjust_stop_loss()
-
     else
+
+        CSV.open($file_name, "wb") do |csv|
+
+            csv << [ Time.now.strftime('%Y-%m-%d %H'), result['orderId'] ]
+    
+        end
         
-        print_out( $pair )
+        puts $pair
 
         puts 'Stop Loss is now the Entry Price'
+
+        #######################
+        # Delete Previous Order
+        #######################
 
         $end_point = '/fapi/v1/openOrder'
 
@@ -243,9 +233,7 @@ def adjust_stop_loss()
 
         $extra = '&orderId=' + $old_order_id.to_s
 
-        execute()
-
-        return result['orderId']
+        puts execute()
 
     end
 end

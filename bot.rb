@@ -140,7 +140,7 @@ loop do
 
         $open_orders = execute()
 
-        if $open_orders == 'error' || $open_orders.include?('code')
+        if $open_orders == 'error' || $open_orders.include?('code') || $open_orders.empty?
             # print_out('cannot get open orders for ' + $pair)
             next
         end
@@ -366,13 +366,17 @@ loop do
             $end_point = '/fapi/v1/order'
         
             $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
+
+            # price_after_zero_point_five_percent = $ticker_price * 0.995
+
+            # $extra = '&side=' + side + '&type=LIMIT' + '&price=' + price_after_zero_point_five_percent.to_s[0, $cap] + '&quantity=' + quantity.to_s + '&timeInForce=GTC'
         
             result = execute()
 
             if result.include?('orderId')
 
                 create_stop_loss()
-            
+       
                 until start == 10 do
 
                     if $long
@@ -407,9 +411,33 @@ loop do
             # Create stop loss and take profit if file not found
             ####################################################
 
-            if !File.exist?($file_name)
+            stop_loss_does_not_exist = true
+
+            take_profit_does_not_exist = true
+
+            for open_order in $open_orders
+
+                if open_order['type'] == 'STOP_MARKET'
+
+                    stop_loss_does_not_exist = false
+
+                end
+
+                if open_order['type'] == 'LIMIT'
+
+                    take_profit_does_not_exist = false
+
+                end
+
+            end
+
+            if stop_loss_does_not_exist
 
                 create_stop_loss()
+
+            end
+
+            if take_profit_does_not_exist
 
                 until start == 10 do
 
@@ -430,9 +458,8 @@ loop do
                     start += 1
             
                 end
-
             end
-
+            
         end
     end
 end
