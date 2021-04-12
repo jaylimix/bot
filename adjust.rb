@@ -70,28 +70,6 @@ loop do
 
                 if open_order['type'] == 'STOP_MARKET'
 
-                    if File.exist?($file_name)
-        
-                        row = CSV.read($file_name)
-
-                        if row[0][1].to_s == ''
-
-                            $old_order_id = open_order['orderId'].to_s
-
-                        else
-
-                            $old_order_id = row[0][1].to_s
-
-                            if $old_order_id == open_order['orderId'].to_s
-
-                                break
-
-                            end
-
-                        end
-
-                    end
-
                     ###############
                     # Get Positions
                     ###############
@@ -111,9 +89,19 @@ loop do
                         next
                     end
 
-                    $position_entry_price = position_risk[0]['entryPrice']
+                    stop_price = open_order['stopPrice'].to_f
 
-                    adjust_stop_loss()
+                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+
+                    the_difference = (stop_price - $position_entry_price).abs
+
+                    if the_difference / $position_entry_price > 0.01
+
+                        $old_order_id = open_order['orderId']
+                        
+                        adjust_stop_loss()
+
+                    end
 
                 end
             end
@@ -211,12 +199,6 @@ def adjust_stop_loss()
 
     else
 
-        CSV.open($file_name, "wb") do |csv|
-
-            csv << [ Time.now.strftime('%Y-%m-%d %H'), result['orderId'] ]
-    
-        end
-        
         puts $pair
 
         puts 'Stop Loss is now the Entry Price'

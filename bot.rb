@@ -375,6 +375,12 @@ loop do
 
             if result.include?('orderId')
 
+                CSV.open($file_name, "wb") do |csv|
+
+                    csv << [ Time.now.strftime('%Y-%m-%d %H') ]
+            
+                end
+
                 create_stop_loss()
        
                 until start == 10 do
@@ -609,12 +615,6 @@ def create_stop_loss()
         print_out($pair)
         
         # puts 'SL: ' + stop_price
-
-        CSV.open($file_name, "wb") do |csv|
-
-            csv << [ Time.now.strftime('%Y-%m-%d %H') ]
-    
-        end
 
     end
 
