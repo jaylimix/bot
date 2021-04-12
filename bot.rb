@@ -149,7 +149,7 @@ loop do
 
         start = 0
 
-        $multiplier = 0.8
+        $multiplier = 0.5
         
         if $long
 
@@ -301,6 +301,8 @@ loop do
 
             low_of_previous_bar = (klines[key_of_previous_bar][3]).to_f
 
+            close_of_previous_bar = (klines[key_of_previous_bar][4]).to_f
+
             count_compare_highest_lowest = 0
 
             until key_of_previous_bar == 0 do
@@ -359,11 +361,15 @@ loop do
         
             $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
 
-            # price_after_zero_point_five_percent = $ticker_price * 0.995
-
-            # $extra = '&side=' + side + '&type=LIMIT' + '&price=' + price_after_zero_point_five_percent.to_s[0, $cap] + '&quantity=' + quantity.to_s + '&timeInForce=GTC'
-        
             result = execute()
+
+            # $entry_side = side
+
+            # $entry_quantity = quantity.to_s
+
+            # $price_after_zero_point_five_percent = close_of_previous_bar * 0.995
+            
+            # result = open_new_limit_order()
 
             if result.include?('orderId')
 
@@ -394,13 +400,6 @@ loop do
                     start += 1
             
                 end
-
-            else
-
-                print_out($pair)
-
-                puts result
-
             end
         
         else
@@ -408,10 +407,6 @@ loop do
             #######################################################################
             # Create stop loss and take profit if not found in open orders response
             #######################################################################
-
-            if $open_orders.empty? # API returns empty when no open orders
-                next
-            end
 
             stop_loss_does_not_exist = true
 
@@ -537,6 +532,29 @@ def execute()
         # print_out('no internet')
         sleep 10
         execute()
+    end
+end
+
+def open_new_limit_order()
+
+    $type = 'POST'
+        
+    $end_point = '/fapi/v1/order'
+
+    $extra = '&side=' + $entry_side + '&type=LIMIT' + '&price=' + $price_after_zero_point_five_percent.to_s[0, $cap] + '&quantity=' + $entry_quantity + '&timeInForce=GTC'
+
+    result = execute()
+
+    if !result.empty? && result.has_key?('code')
+
+        print_out($pair)
+
+        puts result
+
+        $cap -= 1
+
+        open_new_limit_order()
+
     end
 end
 

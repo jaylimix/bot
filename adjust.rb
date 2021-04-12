@@ -215,7 +215,7 @@ def adjust_stop_loss()
 
         $extra = '&orderId=' + $old_order_id.to_s
 
-        puts execute()
+        execute()
 
     end
 end
