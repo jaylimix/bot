@@ -110,8 +110,6 @@ loop do
             next
         end
 
-        key_of_current_bar = klines.count - 1
-
         previous_bar_key = klines.count - 2
 
         total_diff = 0
@@ -140,7 +138,7 @@ loop do
 
         $open_orders = execute()
 
-        if $open_orders == 'error' || $open_orders.include?('code') || $open_orders.empty?
+        if $open_orders == 'error' || $open_orders.include?('code') # API returns empty when no open orders
             # print_out('cannot get open orders for ' + $pair)
             next
         end
@@ -151,23 +149,17 @@ loop do
 
         start = 0
 
-        $initial_multiplier = 0.5
+        $multiplier = 0.8
         
         if $long
 
-            $tp_price = $ticker_price + $average_range * $initial_multiplier
-
-            $stop_price = $ticker_price - $average_range
+            $stop_price = $ticker_price - $average_range * $multiplier
 
         else
 
-            $tp_price = $ticker_price - $average_range * $initial_multiplier
-
-            $stop_price = $ticker_price + $average_range
+            $stop_price = $ticker_price + $average_range * $multiplier
 
         end
-
-        $tp_price = $tp_price.to_s[0, $cap]
 
         $stop_price = $stop_price.to_s[0, $cap]
 
@@ -387,17 +379,17 @@ loop do
 
                     if $long
 
-                        $tp_price = $ticker_price + $average_range * $initial_multiplier
+                        $tp_price = $ticker_price + $average_range * $multiplier
             
                     else
             
-                        $tp_price = $ticker_price - $average_range * $initial_multiplier
+                        $tp_price = $ticker_price - $average_range * $multiplier
             
                     end
 
                     create_take_profit()
             
-                    $initial_multiplier += 1
+                    $multiplier += 1
             
                     start += 1
             
@@ -413,9 +405,13 @@ loop do
         
         else
 
-            ####################################################
-            # Create stop loss and take profit if file not found
-            ####################################################
+            #######################################################################
+            # Create stop loss and take profit if not found in open orders response
+            #######################################################################
+
+            if $open_orders.empty? # API returns empty when no open orders
+                next
+            end
 
             stop_loss_does_not_exist = true
 
@@ -449,17 +445,17 @@ loop do
 
                     if $long
 
-                        $tp_price = $ticker_price + $average_range * $initial_multiplier
+                        $tp_price = $ticker_price + $average_range * $multiplier
             
                     else
             
-                        $tp_price = $ticker_price - $average_range * $initial_multiplier
+                        $tp_price = $ticker_price - $average_range * $multiplier
             
                     end
 
                     create_take_profit()
 
-                    $initial_multiplier += 1
+                    $multiplier += 1
             
                     start += 1
             
