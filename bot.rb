@@ -183,6 +183,14 @@ loop do
 
             end
 
+            ####################################
+            # One entry order and one stop order
+            ####################################
+
+            # if $open_orders.count == 2
+                # next
+            # end
+
             ###################################################
             # Check whether position is opened in the same hour
             ###################################################
