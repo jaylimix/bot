@@ -62,7 +62,7 @@ loop do
 
         if $ticker_price * quantity >= max_position_size
 
-            print_out($pair + '  MORE than $' + max_position_size)
+            print_out($pair + '  MORE than $' + max_position_size.to_s)
 
             next
 
@@ -70,7 +70,7 @@ loop do
 
         if $ticker_price * quantity < min_position_size
 
-            print_out($pair + ' LESS than $' + max_position_size)
+            print_out($pair + ' LESS than $' + max_position_size.to_s)
 
         end
 
