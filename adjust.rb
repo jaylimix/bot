@@ -95,7 +95,7 @@ loop do
 
                     the_difference = (stop_price - $position_entry_price).abs
 
-                    if the_difference / $position_entry_price > 0.01
+                    if the_difference / $position_entry_price > 0.005
 
                         $old_order_id = open_order['orderId']
                         
@@ -184,17 +184,17 @@ def adjust_stop_loss()
 
     if result.empty?
         
-        puts $pair
+        print_out($pair)
         puts 'empty'
 
     elsif result == 'error'
 
-        puts $pair
+        print_out($pair)
         puts 'error'
 
     elsif result.has_key?('code')
 
-        puts $pair
+        print_out($pair)
         puts result
 
     else

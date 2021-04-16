@@ -188,6 +188,27 @@ loop do
             ####################################
 
             # if $open_orders.count == 2
+
+                #####################################
+                # Compare server time with order time
+                #####################################
+
+                # $type = 'GET'
+
+                # $end_point = '/fapi/v1/time'
+
+                # result = execute()
+
+                # print_out( $pair )
+
+                # puts result['serverTime']
+
+                # puts $open_orders[0]['time']
+
+                # time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
+
+                # puts time_diff
+
                 # next
             # end
 
