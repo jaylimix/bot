@@ -187,30 +187,41 @@ loop do
             # One entry order and one stop order
             ####################################
 
-            # if $open_orders.count == 2
+            if $open_orders.count == 2
 
                 #####################################
                 # Compare server time with order time
                 #####################################
 
-                # $type = 'GET'
+                $type = 'GET'
 
-                # $end_point = '/fapi/v1/time'
+                $end_point = '/fapi/v1/time'
 
-                # result = execute()
+                result = execute()
 
-                # print_out( $pair )
+                print_out( $pair )
 
-                # puts result['serverTime']
+                puts result['serverTime']
 
-                # puts $open_orders[0]['time']
+                puts $open_orders[0]['time']
 
-                # time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
+                time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
 
-                # puts time_diff
+                if time_diff > 60*60*1000
 
-                # next
-            # end
+                    $type = 'DELETE'
+
+                    $end_point = '/fapi/v1/allOpenOrders'
+                    
+                    print_out( $pair )
+
+                    puts execute()
+
+                end
+
+                next
+
+            end
 
             ###################################################
             # Check whether position is opened in the same hour
@@ -388,17 +399,17 @@ loop do
         
             $end_point = '/fapi/v1/order'
         
-            $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
+            # $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
 
-            result = execute()
+            # result = execute()
 
-            # $entry_side = side
+            $entry_side = side
 
-            # $entry_quantity = quantity.to_s
+            $entry_quantity = quantity.to_s
 
-            # $price_after_zero_point_five_percent = close_of_previous_bar * 0.995
+            $price_after_zero_point_five_percent = close_of_previous_bar * 0.995
             
-            # result = open_new_limit_order()
+            result = open_new_limit_order()
 
             if result.include?('orderId')
 
