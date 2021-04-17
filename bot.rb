@@ -399,10 +399,6 @@ loop do
         
             $end_point = '/fapi/v1/order'
         
-            # $extra = '&side=' + side + '&type=MARKET' + '&quantity=' + quantity.to_s
-
-            # result = execute()
-
             $entry_side = side
 
             $entry_quantity = quantity.to_s
@@ -419,30 +415,13 @@ loop do
             
                 end
 
-                create_stop_loss()
+                limit_entry_create_stop_loss()
        
-                until start == 10 do
-
-                    if $long
-
-                        $tp_price = $ticker_price + $average_range * $multiplier
-            
-                    else
-            
-                        $tp_price = $ticker_price - $average_range * $multiplier
-            
-                    end
-
-                    create_take_profit()
-            
-                    $multiplier += 1
-            
-                    start += 1
-            
-                end
             end
+
+        end
         
-        else
+        if position_amount != 0
 
             #######################################################################
             # Create stop loss and take profit if not found in open orders response
@@ -476,15 +455,17 @@ loop do
 
             if take_profit_does_not_exist
 
+                entry_price = position_risk[0]['entryPrice'].to_f
+
                 until start == 10 do
 
                     if $long
 
-                        $tp_price = $ticker_price + $average_range * $multiplier
+                        $tp_price = entry_price + $average_range * $multiplier
             
                     else
             
-                        $tp_price = $ticker_price - $average_range * $multiplier
+                        $tp_price = entry_price - $average_range * $multiplier
             
                     end
 
@@ -595,6 +576,10 @@ def open_new_limit_order()
 
         open_new_limit_order()
 
+    else
+
+        return result
+
     end
 end
 
@@ -666,10 +651,50 @@ def create_stop_loss()
 
     else
 
-        print_out($pair)
-        
-        # puts 'SL: ' + stop_price
+        print_out($pair + ' SL: ' + $stop_price)
 
+    end
+
+end
+
+def limit_entry_create_stop_loss()
+    
+    if $long
+
+        $stop_price = $price_after_zero_point_five_percent - $average_range * $multiplier
+
+        side = 'SELL'
+
+    else
+
+        $stop_price = $price_after_zero_point_five_percent + $average_range * $multiplier
+
+        side = 'BUY'
+
+    end
+
+    $type = 'POST'
+
+    $end_point = '/fapi/v1/order'
+
+    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+
+    result = execute()
+
+    if !result.empty? && result.has_key?('code')
+
+        print_out($pair)
+
+        puts $stop_price.to_s
+
+        $cap -= 1
+
+        create_stop_loss()
+
+    else
+
+        print_out($pair + ' SL: ' + $stop_price)
+        
     end
 
 end
