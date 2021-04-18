@@ -60,50 +60,48 @@ loop do
             # Adjust stop loss to become entry price
             ########################################
 
-            if $open_orders.count >= 11 # API often returns wrong value causes adjustment of the stop loss too soon
+            if $open_orders.count == 10
 
-                next
+                for open_order in $open_orders
 
-            end
+                    if open_order['type'] == 'STOP_MARKET'
 
-            for open_order in $open_orders
+                        ###############
+                        # Get Positions
+                        ###############
 
-                if open_order['type'] == 'STOP_MARKET'
+                        $type = 'GET'
 
-                    ###############
-                    # Get Positions
-                    ###############
+                        $end_point = '/fapi/v2/positionRisk'
 
-                    $type = 'GET'
+                        position_risk = execute()
 
-                    $end_point = '/fapi/v2/positionRisk'
+                        if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
+                            # print_out('cannot get position risk for ' + $pair)
+                            next
+                        end
 
-                    position_risk = execute()
+                        if position_risk[0]['positionAmt'].to_f == 0.0
+                            next
+                        end
 
-                    if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
-                        # print_out('cannot get position risk for ' + $pair)
-                        next
-                    end
+                        stop_price = open_order['stopPrice'].to_f
 
-                    if position_risk[0]['positionAmt'].to_f == 0.0
-                        next
-                    end
+                        $position_entry_price = position_risk[0]['entryPrice'].to_f
 
-                    stop_price = open_order['stopPrice'].to_f
+                        the_difference = (stop_price - $position_entry_price).abs
 
-                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+                        if the_difference / $position_entry_price > 0.005
 
-                    the_difference = (stop_price - $position_entry_price).abs
+                            $old_order_id = open_order['orderId']
+                            
+                            adjust_stop_loss()
 
-                    if the_difference / $position_entry_price > 0.005
-
-                        $old_order_id = open_order['orderId']
-                        
-                        adjust_stop_loss()
+                        end
 
                     end
-
                 end
+                
             end
         end
     end

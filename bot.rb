@@ -70,7 +70,7 @@ loop do
 
         if $ticker_price * quantity < min_position_size
 
-            print_out($pair + ' LESS than $' + max_position_size.to_s)
+            print_out($pair + ' LESS than $' + min_position_size.to_s)
 
         end
 
@@ -201,11 +201,13 @@ loop do
 
                 print_out( $pair )
 
-                puts result['serverTime']
+                # puts result['serverTime']
 
-                puts $open_orders[0]['time']
+                # puts $open_orders[0]['time']
 
                 time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
+
+                puts time_diff
 
                 if time_diff > 60*60*1000
 
@@ -213,7 +215,7 @@ loop do
 
                     $end_point = '/fapi/v1/allOpenOrders'
                     
-                    print_out( $pair )
+                    print_out($pair + ' more than an hour')
 
                     puts execute()
 
@@ -651,7 +653,7 @@ def create_stop_loss()
 
     else
 
-        print_out($pair + ' SL: ' + $stop_price)
+        print_out($pair + ' SL: ' + $stop_price.to_s[0, $cap])
 
     end
 
@@ -693,7 +695,7 @@ def limit_entry_create_stop_loss()
 
     else
 
-        print_out($pair + ' SL: ' + $stop_price)
+        print_out($pair + ' SL: ' + $stop_price.to_s[0, $cap])
         
     end
 
