@@ -27,20 +27,6 @@ loop do
 
             $cap = cqc[2]
 
-            # if $pair != 'OMG'
-                # next
-            # end
-
-            if $long
-
-                $file_name = 'long_positions/' + $pair + '.csv'
-
-            else
-
-                $file_name = 'short_positions/' + $pair + '.csv'
-
-            end
-
             #################
             # Get Open Orders
             #################
@@ -60,49 +46,99 @@ loop do
             # Adjust stop loss to become entry price
             ########################################
 
-            if $open_orders.count == 10
+            if $open_orders.count >= 11
+                next
+            end
 
-                for open_order in $open_orders
+            ###############
+            # Get Positions
+            ###############
 
-                    if open_order['type'] == 'STOP_MARKET'
+            $type = 'GET'
 
-                        ###############
-                        # Get Positions
-                        ###############
+            $end_point = '/fapi/v2/positionRisk'
 
-                        $type = 'GET'
+            position_risk = execute()
 
-                        $end_point = '/fapi/v2/positionRisk'
+            if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
+                # print_out('cannot get position risk for ' + $pair)
+                next
+            end
 
-                        position_risk = execute()
+            position_amount = position_risk[0]['positionAmt'].to_f
 
-                        if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
-                            # print_out('cannot get position risk for ' + $pair)
-                            next
-                        end
+            ############################################
+            # Delete stop market orders when no position 
+            ############################################
+            
+            if position_amount == 0 && $open_orders.count == 1
 
-                        if position_risk[0]['positionAmt'].to_f == 0.0
-                            next
-                        end
+                $type = 'DELETE'
 
-                        stop_price = open_order['stopPrice'].to_f
+                $end_point = '/fapi/v1/allOpenOrders'
+                
+                print_out( $pair )
 
-                        $position_entry_price = position_risk[0]['entryPrice'].to_f
+                puts execute()
 
-                        the_difference = (stop_price - $position_entry_price).abs
+            end
 
-                        if the_difference / $position_entry_price > 0.005
+            #############################################################
+            # Delete open orders when no position and one hour has passed
+            #############################################################
 
-                            $old_order_id = open_order['orderId']
-                            
-                            adjust_stop_loss()
+            if position_amount == 0 && $open_orders.count == 2
 
-                        end
+                #####################################
+                # Compare server time with order time
+                #####################################
+
+                $type = 'GET'
+
+                $end_point = '/fapi/v1/time'
+
+                result = execute()
+
+                print_out( $pair )
+
+                time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
+
+                puts time_diff
+
+                if time_diff > 60*60*1000
+
+                    $type = 'DELETE'
+
+                    $end_point = '/fapi/v1/allOpenOrders'
+                    
+                    print_out($pair + ' more than an hour')
+
+                    puts execute()
+
+                end
+            end
+
+            for open_order in $open_orders
+
+                if open_order['type'] == 'STOP_MARKET'
+
+                    stop_price = open_order['stopPrice'].to_f
+
+                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+
+                    the_difference = (stop_price - $position_entry_price).abs
+
+                    if the_difference / $position_entry_price > 0.005
+
+                        $old_order_id = open_order['orderId']
+                        
+                        adjust_stop_loss()
 
                     end
+
                 end
-                
             end
+            
         end
     end
 

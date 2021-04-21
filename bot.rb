@@ -167,64 +167,6 @@ loop do
 
         if position_amount == 0
 
-            ###########################
-            # Delete stop market orders
-            ###########################
-            
-            if $open_orders.count == 1
-
-                $type = 'DELETE'
-
-                $end_point = '/fapi/v1/allOpenOrders'
-                
-                print_out( $pair )
-
-                puts execute()
-
-            end
-
-            ####################################
-            # One entry order and one stop order
-            ####################################
-
-            if $open_orders.count == 2
-
-                #####################################
-                # Compare server time with order time
-                #####################################
-
-                $type = 'GET'
-
-                $end_point = '/fapi/v1/time'
-
-                result = execute()
-
-                print_out( $pair )
-
-                # puts result['serverTime']
-
-                # puts $open_orders[0]['time']
-
-                time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
-
-                puts time_diff
-
-                if time_diff > 60*60*1000
-
-                    $type = 'DELETE'
-
-                    $end_point = '/fapi/v1/allOpenOrders'
-                    
-                    print_out($pair + ' more than an hour')
-
-                    puts execute()
-
-                end
-
-                next
-
-            end
-
             ###################################################
             # Check whether position is opened in the same hour
             ###################################################
@@ -638,6 +580,8 @@ def create_stop_loss()
     $end_point = '/fapi/v1/order'
 
     $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+
+    puts $extra
 
     result = execute()
 
