@@ -329,7 +329,7 @@ loop do
                 
             end
 
-            if count_compare_highest_lowest > 60 || count_compare_highest_lowest < 20
+            if count_compare_highest_lowest > 30 || count_compare_highest_lowest < 20
                 
                 next
 
@@ -551,13 +551,13 @@ def create_take_profit()
 
         print_out($pair)
 
-        puts $tp_price.to_s[0, $cap]
+        puts $extra
 
         puts result
 
-        $cap -= 1
+        # $cap -= 1
 
-        create_take_profit()
+        # create_take_profit()
 
     end
 

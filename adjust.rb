@@ -42,13 +42,7 @@ loop do
                 next
             end
 
-            ########################################
-            # Adjust stop loss to become entry price
-            ########################################
-
-            if $open_orders.count >= 11
-                next
-            end
+            
 
             ###############
             # Get Positions
@@ -67,9 +61,28 @@ loop do
 
             position_amount = position_risk[0]['positionAmt'].to_f
 
-            ############################################
-            # Delete stop market orders when no position 
-            ############################################
+            ##############################################################
+            # Go to next when open orders is still 11
+            # Go to next when have a position and order just got triggered
+            ##############################################################
+
+            if $open_orders.count >= 11
+                
+                next
+
+            elsif position_amount != 0 && $open_orders.count == 1
+
+                next
+
+            else
+                puts ''
+                puts $pair
+                puts $open_orders.count
+            end
+
+            #############################################
+            # When no position, delete hanging stop order
+            #############################################
             
             if position_amount == 0 && $open_orders.count == 1
 
@@ -83,9 +96,9 @@ loop do
 
             end
 
-            #############################################################
-            # Delete open orders when no position and one hour has passed
-            #############################################################
+            ##############################################################################
+            # When no position, delete entry order and stop order when one hour has passed
+            ##############################################################################
 
             if position_amount == 0 && $open_orders.count == 2
 
@@ -111,37 +124,42 @@ loop do
 
                     $end_point = '/fapi/v1/allOpenOrders'
                     
-                    print_out($pair + ' more than an hour')
+                    print_out($pair)
 
                     puts execute()
 
+                    puts 'more than an hour'
+
                 end
             end
 
-            for open_order in $open_orders
+            ####################################
+            # Adjust the stop loss to break even
+            ####################################
+            if position_amount != 0
 
-                if open_order['type'] == 'STOP_MARKET'
+                for open_order in $open_orders
 
-                    stop_price = open_order['stopPrice'].to_f
+                    if open_order['type'] == 'STOP_MARKET'
 
-                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+                        stop_price = open_order['stopPrice'].to_f
 
-                    the_difference = (stop_price - $position_entry_price).abs
+                        $position_entry_price = position_risk[0]['entryPrice'].to_f
 
-                    if the_difference / $position_entry_price > 0.005
+                        the_difference = (stop_price - $position_entry_price).abs
 
-                        $old_order_id = open_order['orderId']
-                        
-                        adjust_stop_loss()
+                        if the_difference / $position_entry_price > 0.005
 
+                            $old_order_id = open_order['orderId']
+                            
+                            adjust_stop_loss()
+
+                        end
                     end
-
                 end
             end
-            
         end
     end
-
 end
 }
 
@@ -230,6 +248,8 @@ def adjust_stop_loss()
 
         print_out($pair)
         puts result
+        puts $extra
+        puts 'Open orders count: ' + $open_orders.count.to_s
 
     else
 
