@@ -70,14 +70,12 @@ loop do
                 
                 next
 
-            elsif position_amount != 0 && $open_orders.count == 1
+            end
+
+            if position_amount != 0 && $open_orders.count == 1
 
                 next
 
-            else
-                puts ''
-                puts $pair
-                puts $open_orders.count
             end
 
             #############################################
@@ -151,6 +149,10 @@ loop do
                         if the_difference / $position_entry_price > 0.005
 
                             $old_order_id = open_order['orderId']
+
+                            puts 'OPEN ORDERS COUNT'
+
+                            puts $open_orders.count
                             
                             adjust_stop_loss()
 

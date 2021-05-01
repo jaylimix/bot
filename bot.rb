@@ -167,6 +167,55 @@ loop do
 
         if position_amount == 0
 
+            #############################################
+            # When no position, delete hanging stop order
+            #############################################
+            
+            if $open_orders.count == 1
+
+                $type = 'DELETE'
+
+                $end_point = '/fapi/v1/allOpenOrders'
+                
+                print_out( $pair )
+
+                puts execute()
+
+            end
+
+            ##############################################################################
+            # When no position, delete entry order and stop order when one hour has passed
+            ##############################################################################
+
+            if $open_orders.count == 2
+
+                #####################################
+                # Compare server time with order time
+                #####################################
+
+                $type = 'GET'
+
+                $end_point = '/fapi/v1/time'
+
+                result = execute()
+
+                time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
+
+                if time_diff > 60*60*1000
+
+                    $type = 'DELETE'
+
+                    $end_point = '/fapi/v1/allOpenOrders'
+
+                    print_out( $pair )
+
+                    puts execute()
+
+                    puts 'More than an hour'
+
+                end
+            end
+
             ###################################################
             # Check whether position is opened in the same hour
             ###################################################
@@ -422,6 +471,44 @@ loop do
                 end
             end
             
+            #############################################
+            # Go to next when open orders is still 11
+            # Go to next when an order just got triggered
+            #############################################
+
+            if $open_orders.count >= 11 || $open_orders.count == 1
+                
+                next
+
+            end
+
+            ####################################
+            # Adjust the stop loss to break even
+            ####################################
+
+            for open_order in $open_orders
+
+                if open_order['type'] == 'STOP_MARKET'
+
+                    stop_price = open_order['stopPrice'].to_f
+
+                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+
+                    the_difference = (stop_price - $position_entry_price).abs
+
+                    if the_difference / $position_entry_price > 0.005
+
+                        $old_order_id = open_order['orderId']
+
+                        puts 'OPEN ORDERS COUNT'
+
+                        puts $open_orders.count
+                        
+                        adjust_stop_loss()
+
+                    end
+                end
+            end
         end
     end
 end
@@ -645,3 +732,62 @@ def limit_entry_create_stop_loss()
 
 end
 
+def adjust_stop_loss()
+
+    $type = 'POST'
+
+    $end_point = '/fapi/v1/order'
+
+    if $long
+
+        side = 'SELL'
+
+    else
+
+        side = 'BUY'
+
+    end
+
+    $extra = '&stopPrice=' + $position_entry_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+
+    result = execute()
+
+    if result.empty?
+        
+        print_out($pair)
+        puts 'empty'
+
+    elsif result == 'error'
+
+        print_out($pair)
+        puts 'error'
+
+    elsif result.has_key?('code')
+
+        print_out($pair)
+        puts result
+        puts $extra
+        puts 'Open orders count: ' + $open_orders.count.to_s
+
+    else
+
+        puts $pair
+
+        puts 'Stop Loss is now the Entry Price'
+
+        #######################
+        # Delete Previous Order
+        #######################
+
+        $end_point = '/fapi/v1/openOrder'
+
+        $type = 'DELETE'
+
+        $end_point = '/fapi/v1/order'
+
+        $extra = '&orderId=' + $old_order_id.to_s
+
+        execute()
+
+    end
+end
