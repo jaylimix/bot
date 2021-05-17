@@ -378,7 +378,7 @@ loop do
                 
             end
 
-            if count_compare_highest_lowest > 30 || count_compare_highest_lowest < 20
+            if count_compare_highest_lowest < 30 || count_compare_highest_lowest > 80
                 
                 next
 
@@ -396,7 +396,7 @@ loop do
 
             $entry_quantity = quantity.to_s
 
-            $price_after_zero_point_five_percent = close_of_previous_bar * 0.995
+            $price_after_zero_point_five_percent = close_of_previous_bar * 0.997
             
             result = open_new_limit_order()
 
@@ -500,9 +500,9 @@ loop do
 
                         $old_order_id = open_order['orderId']
 
-                        puts 'OPEN ORDERS COUNT'
+                        # puts 'OPEN ORDERS COUNT'
 
-                        puts $open_orders.count
+                        # puts $open_orders.count
                         
                         adjust_stop_loss()
 
