@@ -396,7 +396,15 @@ loop do
 
             $entry_quantity = quantity.to_s
 
-            $price_after_zero_point_five_percent = close_of_previous_bar * 0.997
+            if $long
+
+                $price_after_zero_point_five_percent = close_of_previous_bar * 0.997
+
+            else
+
+                $price_after_zero_point_five_percent = close_of_previous_bar * 1.003
+
+            end
             
             result = open_new_limit_order()
 
