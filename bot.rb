@@ -702,13 +702,13 @@ def limit_entry_create_stop_loss()
     
     if $long
 
-        $stop_price = $price_after_zero_point_five_percent - $average_range * $multiplier
+        $stop_price = $price_after_zero_point_five_percent - $average_range
 
         side = 'SELL'
 
     else
 
-        $stop_price = $price_after_zero_point_five_percent + $average_range * $multiplier
+        $stop_price = $price_after_zero_point_five_percent + $average_range
 
         side = 'BUY'
 
