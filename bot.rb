@@ -148,22 +148,22 @@ loop do
         #############################################
 
         start = 0
-
-        $multiplier = 0.5
         
         if $long
 
-            $stop_price = $ticker_price - $average_range * $multiplier
+            $stop_price = $ticker_price - $average_range
 
         else
 
-            $stop_price = $ticker_price + $average_range * $multiplier
+            $stop_price = $ticker_price + $average_range
 
         end
 
         $stop_price = $stop_price.to_s[0, $cap]
 
         $quantity = (quantity / 10.0)
+
+        $multiplier = 0.5
 
         if position_amount == 0
 
