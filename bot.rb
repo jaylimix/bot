@@ -163,8 +163,6 @@ loop do
 
         $quantity = (quantity / 10.0)
 
-        $multiplier = 0.5
-
         if position_amount == 0
 
             #############################################
@@ -457,6 +455,8 @@ loop do
             if take_profit_does_not_exist
 
                 entry_price = position_risk[0]['entryPrice'].to_f
+
+                $multiplier = 1
 
                 until start == 10 do
 
