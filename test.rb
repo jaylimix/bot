@@ -23,9 +23,9 @@ loop do
 
         $cap = cqc[2]
 
-        # if $pair != 'OMG'
-            # next
-        # end
+        if $pair != 'ANKR'
+            next
+        end
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
 
@@ -91,13 +91,15 @@ loop do
             next
         end
 
-        if klines.count != 205
-            next
-        end
 
-        ########################################
-        # Calculate and Compared Moving Averages
-        ########################################
+        # if klines.count != 100
+        #     next
+        # end
+        
+
+        ##########################
+        # Calculate Moving Average
+        ##########################
 
         total_1 = 0
 
@@ -133,6 +135,8 @@ loop do
 
         ma_1 = total_1 / 200
 
+        puts ma_1
+
         ########################
 
         until kc2 == 4 do
@@ -146,6 +150,8 @@ loop do
         end
 
         ma_2 = total_2 / 200
+
+        puts ma_2
 
         #######################
 
@@ -161,6 +167,8 @@ loop do
 
         ma_3 = total_3 / 200
 
+        puts ma_3
+
         #######################
 
         until kc4 == 2 do
@@ -174,6 +182,8 @@ loop do
         end
 
         ma_4 = total_4 / 200
+
+        puts ma_4
 
         #######################
 
@@ -189,15 +199,20 @@ loop do
 
         ma_5 = total_5 / 200
 
-        if !$long && ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
+        puts ma_5
 
-            # puts $pair + ' has a downward moving average'
+        if ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
+
+            puts $pair + ' has a downward moving average'
 
         else
 
-            next
+            puts 'go next'
 
         end
+
+
+        exit
 
         ##########################
         # Get Position Information
@@ -218,7 +233,7 @@ loop do
 
         total_diff = 0
         
-        number_of_candles = klines.count - 155
+        number_of_candles = klines.count - 150
 
         until previous_bar_key == number_of_candles do
             high = klines[previous_bar_key][2].to_f
