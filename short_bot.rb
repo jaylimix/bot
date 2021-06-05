@@ -7,8 +7,6 @@ require_relative 'coin_quantity_cap'
 
 END{
 
-$long = get_terminal_input()
-
 loop do
 
     $interval = '1h'
@@ -29,15 +27,7 @@ loop do
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
 
-        if $long
-
-            $file_name = 'long_positions/' + $pair + '.csv'
-
-        else
-
-            $file_name = 'short_positions/' + $pair + '.csv'
-
-        end
+        $file_name = 'short_positions/' + $pair + '.csv'
 
         ##################
         # Get Ticker Price
@@ -96,7 +86,7 @@ loop do
         end
 
         ########################################
-        # Calculate and Compared Moving Averages
+        # Calculate and Compare Moving Averages
         ########################################
 
         total_1 = 0
@@ -189,32 +179,13 @@ loop do
 
         ma_5 = total_5 / 200
 
+        if ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
 
-        if $long
+            # puts $pair + ' has a downward 200 moving average for the past 5 hours'
 
-            if ma_1 > ma_2 && ma_2 > ma_3 && ma_4 > ma_5
+        else
 
-                # puts $pair + ' has a upward moving average'
-    
-            else
-    
-                next
-    
-            end
-
-        end
-
-        if !$long
-
-            if ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
-
-                # puts $pair + ' has a downward moving average'
-    
-            else
-    
-                next
-    
-            end
+            next
 
         end
 
@@ -272,16 +243,8 @@ loop do
         #############################################
 
         start = 0
-        
-        if $long
 
-            $stop_price = $ticker_price - $average_range
-
-        else
-
-            $stop_price = $ticker_price + $average_range
-
-        end
+        $stop_price = $ticker_price + $average_range
 
         $stop_price = $stop_price.to_s[0, $cap]
 
@@ -384,35 +347,7 @@ loop do
 
             end
 
-            if $long && green_candle
-                
-                diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-                diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
-
-                if diff_of_open_vs_low / diff_of_high_vs_open > 1
-
-                    is_hammer = true
-                    
-                end
-
-            end
-
-            if $long && red_candle
-
-                diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
-
-                diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
-
-                if diff_of_close_vs_low / diff_of_high_vs_close > 1
-
-                    is_hammer = true
-
-                end
-
-            end
-
-            if !$long && green_candle
+            if green_candle
                 
                 diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
 
@@ -426,7 +361,7 @@ loop do
 
             end
 
-            if !$long && red_candle
+            if red_candle
 
                 diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
 
@@ -464,37 +399,15 @@ loop do
 
                 key_of_previous_bar -= 1
 
-                if $long
+                high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
 
-                    side = 'BUY'
+                if high_of_previous_bar > high_of_previous_previous_bar
 
-                    low_of_previous_previous_bar = klines[key_of_previous_bar][3].to_f
-
-                    if low_of_previous_bar < low_of_previous_previous_bar
-
-                        count_compare_highest_lowest += 1
-
-                    else
-
-                        break
-
-                    end
+                    count_compare_highest_lowest += 1
 
                 else
 
-                    side = 'SELL'
-
-                    high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
-
-                    if high_of_previous_bar > high_of_previous_previous_bar
-
-                        count_compare_highest_lowest += 1
-
-                    else
-
-                        break
-
-                    end
+                    break
 
                 end
                 
@@ -514,19 +427,9 @@ loop do
         
             $end_point = '/fapi/v1/order'
         
-            $entry_side = side
-
             $entry_quantity = quantity.to_s
 
-            if $long
-
-                $price_after_zero_point_five_percent = close_of_previous_bar * 0.997
-
-            else
-
-                $price_after_zero_point_five_percent = close_of_previous_bar * 1.003
-
-            end
+            $price_after_x_percent = close_of_previous_bar * 1.003
             
             result = open_new_limit_order()
 
@@ -584,15 +487,7 @@ loop do
 
                 until start == 10 do
 
-                    if $long
-
-                        $tp_price = entry_price + $average_range * $multiplier
-            
-                    else
-            
-                        $tp_price = entry_price - $average_range * $multiplier
-            
-                    end
+                    $tp_price = entry_price - $average_range * $multiplier
 
                     create_take_profit()
 
@@ -632,10 +527,6 @@ loop do
 
                         $old_order_id = open_order['orderId']
 
-                        # puts 'OPEN ORDERS COUNT'
-
-                        # puts $open_orders.count
-                        
                         adjust_stop_loss()
 
                     end
@@ -646,28 +537,6 @@ loop do
 end
 }
 
-def get_terminal_input()
-
-    print 'Long or Short? (l or s) '
-
-    long_or_short = gets.chomp
-
-    if long_or_short == 'l'
-
-        return true
-
-    elsif long_or_short == 's'
-
-        return false
-
-    else
-        
-        get_terminal_input()
-
-    end
-
-end
-
 def print_out(msg)
     puts ''
     puts msg.to_s + ' ' + Time.now.strftime('%d/%m') + ' ' + Time.now.strftime('%H:%M')
@@ -675,13 +544,9 @@ end
 
 def execute()
 
-    if $long
-        secret = ENV['LONG_SECRET']
-        key = ENV['LONG_KEY']
-    else
-        secret = ENV['SHORT_SECRET']
-        key = ENV['SHORT_KEY']
-    end
+    secret = ENV['SHORT_SECRET']
+
+    key = ENV['SHORT_KEY']
 
     micro_time = (Time.new.strftime('%s').to_i * 1000).to_s
 
@@ -725,7 +590,7 @@ def open_new_limit_order()
         
     $end_point = '/fapi/v1/order'
 
-    $extra = '&side=' + $entry_side + '&type=LIMIT' + '&price=' + $price_after_zero_point_five_percent.to_s[0, $cap] + '&quantity=' + $entry_quantity + '&timeInForce=GTC'
+    $extra = '&side=SELL&type=LIMIT' + '&price=' + $price_after_x_percent.to_s[0, $cap] + '&quantity=' + $entry_quantity + '&timeInForce=GTC'
 
     result = execute()
 
@@ -748,21 +613,11 @@ end
 
 def create_take_profit()
 
-    if $long
-
-        side = 'SELL'
-
-    else
-
-        side = 'BUY'
-
-    end
-
     $type = 'POST'
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&side=' + side + '&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity.to_s + '&timeInForce=GTC' + '&reduceOnly=true'
+    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity.to_s + '&timeInForce=GTC' + '&reduceOnly=true'
 
     result = execute()
 
@@ -784,21 +639,11 @@ end
 
 def create_stop_loss()
     
-    if $long
-    
-        side = 'SELL'
-
-    else
-
-        side = 'BUY'
-
-    end
-
     $type = 'POST'
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
 
     puts $extra
 
@@ -823,26 +668,14 @@ def create_stop_loss()
 end
 
 def limit_entry_create_stop_loss()
-    
-    if $long
 
-        $stop_price = $price_after_zero_point_five_percent - $average_range
-
-        side = 'SELL'
-
-    else
-
-        $stop_price = $price_after_zero_point_five_percent + $average_range
-
-        side = 'BUY'
-
-    end
+    $stop_price = $price_after_x_percent + $average_range
 
     $type = 'POST'
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
 
     result = execute()
 
@@ -870,17 +703,7 @@ def adjust_stop_loss()
 
     $end_point = '/fapi/v1/order'
 
-    if $long
-
-        side = 'SELL'
-
-    else
-
-        side = 'BUY'
-
-    end
-
-    $extra = '&stopPrice=' + $position_entry_price.to_s[0, $cap] + '&side=' + side + '&type=STOP_MARKET' + '&closePosition=true'
+    $extra = '&stopPrice=' + $position_entry_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
 
     result = execute()
 
