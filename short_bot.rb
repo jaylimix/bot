@@ -27,7 +27,7 @@ loop do
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
 
-        $file_name = 'short_positions/' + $pair + '.csv'
+        # $file_name = 'short_positions/' + $pair + '.csv'
 
         ##################
         # Get Ticker Price
@@ -272,17 +272,17 @@ loop do
             # When no position, delete entry order and stop order when one hour has passed
             ##############################################################################
 
+            $type = 'GET'
+
+            $end_point = '/fapi/v1/time'
+
+            result = execute()
+
             if $open_orders.count == 2
 
                 #####################################
                 # Compare server time with order time
                 #####################################
-
-                $type = 'GET'
-
-                $end_point = '/fapi/v1/time'
-
-                result = execute()
 
                 time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
 
@@ -305,16 +305,42 @@ loop do
             # Check whether position is opened in the same hour
             ###################################################
 
-            if File.exist?($file_name)
-            
-                row = CSV.read($file_name)
+            $type = 'GET'
 
-                if Time.now.strftime('%Y-%m-%d %H') == row[0][0].to_s
+            $end_point = '/fapi/v1/allOrders'
 
-                    next
+            $all_orders = execute()
 
+            if $all_orders == 'error' || $all_orders.include?('code')
+                next
+            end
+
+            if $all_orders != []
+
+                already_loss = false
+
+                last_order_index = $all_orders.count - 1
+
+                until last_order_index == 0 do
+
+                    if $all_orders[last_order_index]['status'] == 'FILLED' || $all_orders[last_order_index]['status'] == 'NEW'
+
+                        if Time.at(result['serverTime'].to_i / 1000).to_s[0, 13] == Time.at($all_orders[last_order_index]['updateTime'] / 1000).to_s[0, 13]
+                            # puts $pair
+                            # puts 'ALREADY LOSS IN THE SAME HOUR, GO NEXT'
+                            already_loss = true
+                            break
+                        end
+
+                    end
+                    
+                    last_order_index -= 1
                 end
-        
+
+                if already_loss
+                    next
+                end
+
             end
 
             ##################################
@@ -389,11 +415,9 @@ loop do
 
             high_of_previous_bar = (klines[key_of_previous_bar][2]).to_f
 
-            low_of_previous_bar = (klines[key_of_previous_bar][3]).to_f
-
             close_of_previous_bar = (klines[key_of_previous_bar][4]).to_f
 
-            count_compare_highest_lowest = 0
+            count_compare_highest = 0
 
             until key_of_previous_bar == 0 do
 
@@ -403,7 +427,7 @@ loop do
 
                 if high_of_previous_bar > high_of_previous_previous_bar
 
-                    count_compare_highest_lowest += 1
+                    count_compare_highest += 1
 
                 else
 
@@ -413,10 +437,10 @@ loop do
                 
             end
 
-            if count_compare_highest_lowest < 30 || count_compare_highest_lowest > 80
-                
-                next
+            # if count_compare_highest < 30 || count_compare_highest > 80
 
+            if count_compare_highest <= 10  
+                next
             end
 
             #####################################
@@ -435,11 +459,11 @@ loop do
 
             if result.include?('orderId')
 
-                CSV.open($file_name, "wb") do |csv|
+                # CSV.open($file_name, "wb") do |csv|
 
-                    csv << [ Time.now.strftime('%Y-%m-%d %H') ]
+                #     csv << [ Time.now.strftime('%Y-%m-%d %H') ]
             
-                end
+                # end
 
                 limit_entry_create_stop_loss()
        
