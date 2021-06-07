@@ -22,7 +22,7 @@ loop do
         $cap = cqc[2]
 
         # if $pair != 'OMG'
-            # next
+        #     next
         # end
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
@@ -210,7 +210,7 @@ loop do
         
         number_of_candles = 0
 
-        until previous_bar_key == 145 do
+        until previous_bar_key == 100 do
             high = klines[previous_bar_key][2].to_f
             low = klines[previous_bar_key][3].to_f
             diff = high - low
@@ -284,9 +284,7 @@ loop do
                 # Compare server time with order time
                 #####################################
 
-                time_diff = result['serverTime'].to_i - $open_orders[0]['time'].to_i
-
-                if time_diff > 60*60*1000
+                if Time.at(result['serverTime'].to_i / 1000).to_s[0, 13] != Time.at($open_orders[0]['time'] / 1000).to_s[0, 13]
 
                     $type = 'DELETE'
 
@@ -453,7 +451,7 @@ loop do
         
             $entry_quantity = quantity.to_s
 
-            $price_after_x_percent = close_of_previous_bar * 1.003
+            $price_after_x_percent = close_of_previous_bar * 1.002
             
             result = open_new_limit_order()
 
