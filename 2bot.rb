@@ -27,8 +27,6 @@ loop do
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
 
-        # $file_name = 'short_positions/' + $pair + '.csv'
-
         ##################
         # Get Ticker Price
         ##################
@@ -397,7 +395,7 @@ loop do
     
             $end_point = '/fapi/v1/order'
 
-            $extra = '&side=SELL&type=MARKET&quantity=' + $entry_quantity + '&timeInForce=GTC'
+            $extra = '&side=SELL&type=MARKET&quantity=' + quantity.to_s
 
             result = execute()
 
@@ -406,6 +404,8 @@ loop do
                 print_out($pair)
 
                 puts result
+
+                puts $extra
 
             else
 
@@ -417,7 +417,7 @@ loop do
 
                 until start == 10 do
 
-                    $tp_price = $ticker - $average_range * $multiplier
+                    $tp_price = $ticker_price - $average_range * $multiplier
 
                     create_take_profit()
 
@@ -467,6 +467,8 @@ loop do
                 entry_price = position_risk[0]['entryPrice'].to_f
 
                 $multiplier = 1
+
+                start = 0
 
                 until start == 10 do
 
