@@ -708,11 +708,11 @@ def limit_entry_create_stop_loss()
 
     if result.empty?
 
-        puts 'Limit entry create stop loss'
+        puts 'Empty create stop loss'
     
     elsif result == 'error'
 
-        puts 'Limit entry create stop loss'
+        puts 'Error create stop loss'
 
     elsif result.has_key?('code')
 
@@ -720,7 +720,7 @@ def limit_entry_create_stop_loss()
 
     else
 
-        puts 'Limit entry stop loss created'
+        puts 'Stop loss order created'
         
     end
 
