@@ -628,7 +628,9 @@ def open_new_limit_order()
 
     else
 
-        puts 'Opened new limit order'
+        puts 'Create sell limit order'
+
+        return result
         
     end
 end
