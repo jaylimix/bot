@@ -399,9 +399,9 @@ loop do
 
             result = execute()
 
-            if !result.empty? && result.has_key?('code')
+            print_out($pair)
 
-                print_out($pair)
+            if !result.empty? && result.has_key?('code')
 
                 puts result
 
@@ -458,11 +458,15 @@ loop do
 
             if stop_loss_does_not_exist
 
+                print_out($pair)
+
                 create_stop_loss()
 
             end
 
             if take_profit_does_not_exist
+
+                print_out($pair)
 
                 entry_price = position_risk[0]['entryPrice'].to_f
 
@@ -579,13 +583,21 @@ def create_take_profit()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Empty create take profit'
+    
+    elsif result == 'error'
 
+        puts 'Error create take profit'
+
+    elsif result.has_key?('code')
+        
         puts result
 
-        puts $extra
+    else
+
+        puts 'Take profit created'
 
     end
 
@@ -601,19 +613,21 @@ def create_stop_loss()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Empty create stop loss'
+    
+    elsif result == 'error'
 
+        puts 'Error create stop loss'
+
+    elsif result.has_key?('code')
+        
         puts result
-
-        puts $extra
 
     else
 
-        print_out($pair)
-
-        puts 'SL: ' + $stop_price.to_s[0, $cap]
+        puts 'Stop loss created'
 
     end
 

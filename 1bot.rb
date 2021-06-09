@@ -450,6 +450,8 @@ loop do
             $entry_quantity = quantity.to_s
 
             $price_after_x_percent = close_of_previous_bar * 1.002
+
+            print_out($pair)
             
             result = open_new_limit_order()
 
@@ -489,11 +491,15 @@ loop do
 
             if stop_loss_does_not_exist
 
+                print_out($pair)
+
                 create_stop_loss()
 
             end
 
             if take_profit_does_not_exist
+
+                print_out($pair)
 
                 entry_price = position_risk[0]['entryPrice'].to_f
 
@@ -608,16 +614,22 @@ def open_new_limit_order()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Empty open new limit order'
+    
+    elsif result == 'error'
+
+        puts 'Error open new limit order'
+
+    elsif result.has_key?('code')
 
         puts result
 
     else
 
-        return result
-
+        puts 'Opened new limit order'
+        
     end
 end
 
@@ -631,12 +643,22 @@ def create_take_profit()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Empty create take profit'
+    
+    elsif result == 'error'
+
+        puts 'Error create take profit'
+
+    elsif result.has_key?('code')
 
         puts result
 
+    else
+
+        puts 'Created take profit'
+        
     end
 
 end
@@ -651,18 +673,23 @@ def create_stop_loss()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Empty create stop loss'
+    
+    elsif result == 'error'
+
+        puts 'Error create stop loss'
+
+    elsif result.has_key?('code')
 
         puts result
 
     else
 
-        print_out($pair + ' SL: ' + $stop_price.to_s[0, $cap])
-
+        puts 'Stop Loss created'
+        
     end
-
 end
 
 def limit_entry_create_stop_loss()
@@ -677,15 +704,21 @@ def limit_entry_create_stop_loss()
 
     result = execute()
 
-    if !result.empty? && result.has_key?('code')
+    if result.empty?
 
-        print_out($pair)
+        puts 'Limit entry create stop loss'
+    
+    elsif result == 'error'
+
+        puts 'Limit entry create stop loss'
+
+    elsif result.has_key?('code')
 
         puts result
 
     else
 
-        print_out($pair + ' SL: ' + $stop_price.to_s[0, $cap])
+        puts 'Limit entry stop loss created'
         
     end
 
