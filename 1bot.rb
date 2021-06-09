@@ -622,10 +622,6 @@ def open_new_limit_order()
 
         puts result
 
-        $cap -= 1
-
-        open_new_limit_order()
-
     else
 
         return result
@@ -647,13 +643,7 @@ def create_take_profit()
 
         print_out($pair)
 
-        puts $extra
-
         puts result
-
-        $cap -= 1
-
-        create_take_profit()
 
     end
 
@@ -667,19 +657,13 @@ def create_stop_loss()
 
     $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
 
-    puts $extra
-
     result = execute()
 
     if !result.empty? && result.has_key?('code')
 
         print_out($pair)
 
-        puts $stop_price.to_s
-
-        # $cap -= 1
-
-        # create_stop_loss()
+        puts result
 
     else
 
@@ -705,11 +689,7 @@ def limit_entry_create_stop_loss()
 
         print_out($pair)
 
-        puts $stop_price.to_s
-
-        # $cap -= 1
-
-        # create_stop_loss()
+        puts result
 
     else
 

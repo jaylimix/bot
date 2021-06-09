@@ -585,9 +585,7 @@ def create_take_profit()
 
         puts result
 
-        $cap -= 1
-
-        create_take_profit()
+        puts $extra
 
     end
 
