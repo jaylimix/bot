@@ -435,9 +435,7 @@ loop do
                 
             end
 
-            # if count_compare_highest < 30 || count_compare_highest > 80
-
-            if count_compare_highest <= 10  
+            if count_compare_highest <= 20
                 next
             end
 
@@ -456,12 +454,6 @@ loop do
             result = open_new_limit_order()
 
             if result.include?('orderId')
-
-                # CSV.open($file_name, "wb") do |csv|
-
-                #     csv << [ Time.now.strftime('%Y-%m-%d %H') ]
-            
-                # end
 
                 limit_entry_create_stop_loss()
        
