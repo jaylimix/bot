@@ -748,7 +748,7 @@ def adjust_stop_loss()
 
     else
 
-        puts $pair
+        print_out($pair)
 
         puts 'Stop Loss is now the Entry Price'
 
