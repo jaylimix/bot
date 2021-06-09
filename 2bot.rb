@@ -357,23 +357,23 @@ loop do
             # Check higher or lower than previous candles
             #############################################
 
-            key_of_previous_bar = klines.count - 2
+            current_candle_key = klines.count - 1
 
-            high_of_previous_bar = (klines[key_of_previous_bar][2]).to_f
+            current_candle_high = klines[current_candle_key][2].to_f
 
-            close_of_previous_bar = (klines[key_of_previous_bar][4]).to_f
+            previous_candle_key = current_candle_key - 1
 
             count_compare_highest = 0
 
-            until key_of_previous_bar == 0 do
+            until previous_candle_key == 0 do
 
-                key_of_previous_bar -= 1
+                previous_candle_high = klines[previous_candle_key][2].to_f
 
-                high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
-
-                if high_of_previous_bar > high_of_previous_previous_bar
+                if current_candle_high > previous_candle_high
 
                     count_compare_highest += 1
+
+                    previous_candle_key -= 1
 
                 else
 
