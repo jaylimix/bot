@@ -383,7 +383,7 @@ loop do
                 
             end
 
-            if count_compare_highest <= 30 || count_compare_highest >= 100
+            if count_compare_highest <= 30
                 next
             end
 
