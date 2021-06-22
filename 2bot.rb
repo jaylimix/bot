@@ -17,7 +17,7 @@ loop do
 
         $pair = cqc[0]
 
-        quantity = cqc[1]
+        $quantity_size = cqc[1]
 
         $cap = cqc[2]
 
@@ -26,6 +26,8 @@ loop do
         # end
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
+
+        # $file_name = 'short_positions/' + $pair + '.csv'
 
         ##################
         # Get Ticker Price
@@ -43,6 +45,14 @@ loop do
         end
 
         $ticker_price = (ticker_array['price']).to_f
+
+        if $ticker_price > 50
+
+            next
+
+        end
+
+        quantity = (50 / $ticker_price)
 
         max_position_size = 100
 
@@ -240,11 +250,13 @@ loop do
         # Set Stop Loss, Take Profit, Global Quantity
         #############################################
 
+        start = 0
+
         $stop_price = $ticker_price + $average_range
 
         $stop_price = $stop_price.to_s[0, $cap]
 
-        $quantity = (quantity / 10.0)
+        $quantity = (quantity / 2.0).to_s
 
         if position_amount == 0
 
@@ -290,7 +302,7 @@ loop do
 
                     puts execute()
 
-                    puts 'MORE THAN AN HOUR'
+                    puts 'More than an hour'
 
                 end
             end
@@ -320,6 +332,8 @@ loop do
                     if $all_orders[last_order_index]['status'] == 'FILLED' || $all_orders[last_order_index]['status'] == 'NEW'
 
                         if Time.at(result['serverTime'].to_i / 1000).to_s[0, 13] == Time.at($all_orders[last_order_index]['updateTime'] / 1000).to_s[0, 13]
+                            # puts $pair
+                            # puts 'ALREADY LOSS IN THE SAME HOUR, GO NEXT'
                             already_loss = true
                             break
                         end
@@ -335,19 +349,65 @@ loop do
 
             end
 
-            ##############################################
-            # CHECK IF HIGH VS TICKER PRICE HAS DROPPED 1%
-            ##############################################
+            ##################################
+            # CHECK IF HAMMER OR SHOOTING STAR
+            ##################################
 
-            key_of_current_bar = klines.count - 1
+            is_hammer = false
 
-            high_of_current_bar = (klines[key_of_current_bar][2]).to_f
+            key_of_previous_bar = klines.count - 2
 
-            price_after_dropping_x_percent = high_of_current_bar * 0.99
+            open_of_previous_bar = klines[key_of_previous_bar][1]
 
-            high_vs_ticker_has_dropped_x_percent = false
+            high_of_previous_bar = klines[key_of_previous_bar][2]
 
-            if $ticker_price > price_after_dropping_x_percent
+            low_of_previous_bar = klines[key_of_previous_bar][3]
+
+            close_of_previous_bar = klines[key_of_previous_bar][4]
+
+            green_candle = false
+
+            red_candle = false
+
+            if close_of_previous_bar.to_f > open_of_previous_bar.to_f
+
+                green_candle = true
+
+            else
+
+                red_candle = true
+
+            end
+
+            if green_candle
+                
+                diff_of_high_vs_close = high_of_previous_bar.to_f - close_of_previous_bar.to_f
+
+                diff_of_close_vs_low = close_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                if diff_of_high_vs_close / diff_of_close_vs_low > 1
+
+                    is_hammer = true
+
+                end
+
+            end
+
+            if red_candle
+
+                diff_of_high_vs_open = high_of_previous_bar.to_f - open_of_previous_bar.to_f
+
+                diff_of_open_vs_low = open_of_previous_bar.to_f - low_of_previous_bar.to_f
+
+                if diff_of_high_vs_open / diff_of_open_vs_low > 1
+
+                    is_hammer = true
+
+                end
+
+            end
+
+            if !is_hammer
 
                 next
 
@@ -357,23 +417,23 @@ loop do
             # Check higher or lower than previous candles
             #############################################
 
-            current_candle_key = klines.count - 1
+            key_of_previous_bar = klines.count - 2
 
-            current_candle_high = klines[current_candle_key][2].to_f
+            high_of_previous_bar = (klines[key_of_previous_bar][2]).to_f
 
-            previous_candle_key = current_candle_key - 1
+            close_of_previous_bar = (klines[key_of_previous_bar][4]).to_f
 
             count_compare_highest = 0
 
-            until previous_candle_key == 0 do
+            until key_of_previous_bar == 0 do
 
-                previous_candle_high = klines[previous_candle_key][2].to_f
+                key_of_previous_bar -= 1
 
-                if current_candle_high > previous_candle_high
+                high_of_previous_previous_bar = klines[key_of_previous_bar][2].to_f
+
+                if high_of_previous_bar > high_of_previous_previous_bar
 
                     count_compare_highest += 1
-
-                    previous_candle_key -= 1
 
                 else
 
@@ -383,7 +443,7 @@ loop do
                 
             end
 
-            if count_compare_highest <= 30
+            if count_compare_highest <= 20
                 next
             end
 
@@ -392,42 +452,23 @@ loop do
             #####################################
         
             $type = 'POST'
-    
+        
             $end_point = '/fapi/v1/order'
+        
+            $entry_quantity = quantity.to_s
 
-            $extra = '&side=SELL&type=MARKET&quantity=' + quantity.to_s
-
-            result = execute()
+            $price_after_x_percent = close_of_previous_bar * 1.002
 
             print_out($pair)
-
-            if !result.empty? && result.has_key?('code')
-
-                puts result
-
-                puts $extra
-
-            else
-
-                create_stop_loss()
-
-                $multiplier = 1
-
-                start = 0
-
-                until start == 10 do
-
-                    $tp_price = $ticker_price - $average_range * $multiplier
-
-                    create_take_profit()
-
-                    $multiplier += 1
             
-                    start += 1
-            
-                end
+            result = open_new_limit_order()
 
+            if result.include?('orderId')
+
+                limit_entry_create_stop_loss()
+       
             end
+
         end
         
         if position_amount != 0
@@ -471,8 +512,6 @@ loop do
                 entry_price = position_risk[0]['entryPrice'].to_f
 
                 $multiplier = 1
-
-                start = 0
 
                 until start == 10 do
 
@@ -533,9 +572,9 @@ end
 
 def execute()
 
-    secret = ENV['LONG_SECRET']
+    secret = ENV['SHORT_SECRET']
 
-    key = ENV['LONG_KEY']
+    key = ENV['SHORT_KEY']
 
     micro_time = (Time.new.strftime('%s').to_i * 1000).to_s
 
@@ -573,13 +612,44 @@ def execute()
     end
 end
 
+def open_new_limit_order()
+
+    $type = 'POST'
+        
+    $end_point = '/fapi/v1/order'
+
+    $extra = '&side=SELL&type=LIMIT' + '&price=' + $price_after_x_percent.to_s[0, $cap] + '&quantity=' + $entry_quantity[0, $quantity_size] + '&timeInForce=GTC'
+
+    result = execute()
+
+    if result.empty?
+
+        puts 'Empty open new limit order'
+    
+    elsif result == 'error'
+
+        puts 'Error open new limit order'
+
+    elsif result.has_key?('code')
+
+        puts result
+
+    else
+
+        puts 'Create sell limit order'
+
+        return result
+        
+    end
+end
+
 def create_take_profit()
 
     $type = 'POST'
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity.to_s + '&timeInForce=GTC' + '&reduceOnly=true'
+    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity[0, $quantity_size] + '&timeInForce=GTC' + '&reduceOnly=true'
 
     result = execute()
 
@@ -592,13 +662,13 @@ def create_take_profit()
         puts 'Error create take profit'
 
     elsif result.has_key?('code')
-        
+
         puts result
 
     else
 
-        puts 'Take profit created'
-
+        puts 'Created take profit'
+        
     end
 
 end
@@ -622,13 +692,44 @@ def create_stop_loss()
         puts 'Error create stop loss'
 
     elsif result.has_key?('code')
-        
+
         puts result
 
     else
 
-        puts 'Stop loss created'
+        puts 'Stop Loss created'
+        
+    end
+end
 
+def limit_entry_create_stop_loss()
+
+    $stop_price = $price_after_x_percent + $average_range
+
+    $type = 'POST'
+
+    $end_point = '/fapi/v1/order'
+
+    $extra = '&stopPrice=' + $stop_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
+
+    result = execute()
+
+    if result.empty?
+
+        puts 'Empty create stop loss'
+    
+    elsif result == 'error'
+
+        puts 'Error create stop loss'
+
+    elsif result.has_key?('code')
+
+        puts result
+
+    else
+
+        puts 'Stop loss order created'
+        
     end
 
 end
