@@ -259,8 +259,6 @@ loop do
 
         $stop_price = $stop_price.to_s[0, $cap]
 
-        $quantity = (quantity / 2.0).to_s[0, $quantity_size]
-
         if position_amount == 0
 
             #############################################
@@ -512,7 +510,9 @@ loop do
 
                 entry_price = position_risk[0]['entryPrice'].to_f
 
-                $quantity = position_risk[0]['positionAmt'][1, $quantity_size+1]
+                position_amount = position_risk[0]['positionAmt'].to_f / 2.0
+
+                $quantity = position_amount.to_s[1, $quantity_size]
 
                 $multiplier = 1
 
