@@ -21,7 +21,7 @@ loop do
 
         $cap = cqc[2]
 
-        # if $pair != 'BTS'
+        # if $pair != 'CELR'
 
         #     next
 
@@ -31,10 +31,6 @@ loop do
         #     puts $pair
 
         # end
-
-        $time_now = Time.now.strftime('%Y-%m-%d %H')
-
-        # $file_name = 'short_positions/' + $pair + '.csv'
 
         ##################
         # Get Ticker Price
@@ -265,8 +261,6 @@ loop do
 
         $quantity = (quantity / 10.0).to_s[0, $quantity_size]
 
-        # puts (quantity / 10.0).to_s
-
         if position_amount == 0
 
             #############################################
@@ -341,8 +335,6 @@ loop do
                     if $all_orders[last_order_index]['status'] == 'FILLED' || $all_orders[last_order_index]['status'] == 'NEW'
 
                         if Time.at(result['serverTime'].to_i / 1000).to_s[0, 13] == Time.at($all_orders[last_order_index]['updateTime'] / 1000).to_s[0, 13]
-                            # puts $pair
-                            # puts 'ALREADY LOSS IN THE SAME HOUR, GO NEXT'
                             already_loss = true
                             break
                         end
@@ -519,6 +511,12 @@ loop do
                 print_out($pair)
 
                 entry_price = position_risk[0]['entryPrice'].to_f
+
+                $quantity = position_risk[0]['positionAmt'][1, $quantity_size+1]
+
+                # puts $quantity
+
+                # puts position_risk
 
                 $multiplier = 1
 
@@ -765,10 +763,9 @@ def adjust_stop_loss()
 
     elsif result.has_key?('code')
 
-        # print_out($pair)
-        # puts result
-        # puts $extra
-        # puts 'Open orders count: ' + $open_orders.count.to_s
+        print_out($pair)
+        puts result
+        puts $extra
 
     else
 

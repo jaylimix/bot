@@ -70,7 +70,7 @@ $coin_quantity_cap = [
     ['OCEAN', 3, 6], 
     ['ALPHA', 2, 6], 
     ['MATIC', 2, 6], 
-    ['CELR', 4, 7], 
+    ['CELR', 5, 7], 
     ['OGN', 2, 6], 
     ['LINA', 4, 7], 
     ['RVN', 3, 7], 
