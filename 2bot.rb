@@ -256,7 +256,19 @@ loop do
 
         $stop_price = $stop_price.to_s[0, $cap]
 
-        $quantity = (quantity / 2.0).to_s
+        $quantity = (quantity / 2.0).to_s[0, $quantity_size]
+
+        # puts ''
+
+        # puts $pair
+
+        # puts quantity.to_s
+
+        # puts (quantity / 2.0).to_s[0, $quantity_size]
+
+        # puts (quantity / 2.0).to_s[0, $quantity_size+2]
+
+        next
 
         if position_amount == 0
 
@@ -648,7 +660,7 @@ def create_take_profit()
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity[0, $quantity_size] + '&timeInForce=GTC' + '&reduceOnly=true'
+    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity + '&timeInForce=GTC' + '&reduceOnly=true'
 
     result = execute()
 

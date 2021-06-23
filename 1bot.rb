@@ -21,8 +21,15 @@ loop do
 
         $cap = cqc[2]
 
-        # if $pair != 'OMG'
+        # if $pair != 'BTS'
+
         #     next
+
+        # else
+
+        #     puts ''
+        #     puts $pair
+
         # end
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
@@ -256,7 +263,9 @@ loop do
 
         $stop_price = $stop_price.to_s[0, $cap]
 
-        $quantity = (quantity / 10.0).to_s
+        $quantity = (quantity / 10.0).to_s[0, $quantity_size]
+
+        # puts (quantity / 10.0).to_s
 
         if position_amount == 0
 
@@ -649,7 +658,7 @@ def create_take_profit()
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity[0, $quantity_size] + '&timeInForce=GTC' + '&reduceOnly=true'
+    $extra = '&side=BUY&type=LIMIT' + '&price=' + $tp_price.to_s[0, $cap] + '&quantity=' + $quantity + '&timeInForce=GTC' + '&reduceOnly=true'
 
     result = execute()
 
@@ -759,7 +768,7 @@ def adjust_stop_loss()
         print_out($pair)
         puts result
         puts $extra
-        puts 'Open orders count: ' + $open_orders.count.to_s
+        # puts 'Open orders count: ' + $open_orders.count.to_s
 
     else
 
