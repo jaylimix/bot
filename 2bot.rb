@@ -527,10 +527,10 @@ loop do
             end
             
             ##################################
-            # Go to next when open orders is 3
+            # Go to next when open orders is 2
             ##################################
 
-            if $open_orders.count != 3
+            if $open_orders.count != 2
                 
                 next
 
