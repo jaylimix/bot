@@ -253,8 +253,6 @@ loop do
         # Set Stop Loss, Take Profit, Global Quantity
         #############################################
 
-        start = 0
-
         $stop_price = $ticker_price + $average_range
 
         $stop_price = $stop_price.to_s[0, $cap]
@@ -510,23 +508,36 @@ loop do
 
                 entry_price = position_risk[0]['entryPrice'].to_f
 
-                position_amount = position_risk[0]['positionAmt'].to_f / 2.0
+                position_amount = position_risk[0]['positionAmt'].to_f.abs / 2
 
-                $quantity = position_amount.to_s[1, $quantity_size]
+                puts position_amount
+
+                $quantity = position_amount.to_s
 
                 $multiplier = 1
+
+                start = 0
 
                 until start == 2 do
 
                     $tp_price = entry_price - $average_range * $multiplier
 
-                    create_take_profit()
+                    if start == 1
+
+                        create_take_profit_market()
+
+                    else
+
+                        create_take_profit()
+
+                    end
 
                     $multiplier += 1
             
                     start += 1
             
                 end
+
             end
             
             ##################################
@@ -673,6 +684,35 @@ def create_take_profit()
         
     end
 
+end
+
+def create_take_profit_market()
+
+    $type = 'POST'
+
+    $end_point = '/fapi/v1/order'
+
+    $extra = '&closePosition=true&side=BUY&type=TAKE_PROFIT_MARKET&price=' + $tp_price.to_s[0, $cap]
+
+    result = execute()
+
+    if result.empty?
+
+        puts 'Empty create take profit market'
+    
+    elsif result == 'error'
+
+        puts 'Error create take profit market'
+
+    elsif result.has_key?('code')
+
+        puts result
+
+    else
+
+        puts 'Created take profit market'
+        
+    end
 end
 
 def create_stop_loss()
