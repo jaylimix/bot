@@ -513,7 +513,7 @@ loop do
 
                 $multiplier = 1
 
-                until start == 10 do
+                until start == 2 do
 
                     $tp_price = entry_price - $average_range * $multiplier
 
@@ -526,12 +526,11 @@ loop do
                 end
             end
             
-            #############################################
-            # Go to next when open orders is still 11
-            # Go to next when an order just got triggered
-            #############################################
+            ##################################
+            # Go to next when open orders is 3
+            ##################################
 
-            if $open_orders.count >= 11 || $open_orders.count == 1
+            if $open_orders.count != 3
                 
                 next
 
@@ -572,9 +571,9 @@ end
 
 def execute()
 
-    secret = ENV['SHORT_SECRET']
+    secret = ENV['LONG_SECRET']
 
-    key = ENV['SHORT_KEY']
+    key = ENV['LONG_KEY']
 
     micro_time = (Time.new.strftime('%s').to_i * 1000).to_s
 
