@@ -765,9 +765,9 @@ def adjust_stop_loss()
 
     elsif result.has_key?('code')
 
-        print_out($pair)
-        puts result
-        puts $extra
+        # print_out($pair)
+        # puts result
+        # puts $extra
         # puts 'Open orders count: ' + $open_orders.count.to_s
 
     else

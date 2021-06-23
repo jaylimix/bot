@@ -21,8 +21,15 @@ loop do
 
         $cap = cqc[2]
 
-        # if $pair != 'OMG'
+        # if $pair != 'FTM'
+
         #     next
+
+        # else
+
+        #     puts ''
+        #     puts $pair
+
         # end
 
         $time_now = Time.now.strftime('%Y-%m-%d %H')
@@ -257,18 +264,6 @@ loop do
         $stop_price = $stop_price.to_s[0, $cap]
 
         $quantity = (quantity / 2.0).to_s[0, $quantity_size]
-
-        # puts ''
-
-        # puts $pair
-
-        # puts quantity.to_s
-
-        # puts (quantity / 2.0).to_s[0, $quantity_size]
-
-        # puts (quantity / 2.0).to_s[0, $quantity_size+2]
-
-        next
 
         if position_amount == 0
 
