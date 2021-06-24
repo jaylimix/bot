@@ -510,8 +510,6 @@ loop do
 
                 position_amount = position_risk[0]['positionAmt'].to_f.abs / 10
 
-                puts position_amount
-
                 $multiplier = 1
 
                 start = 0
@@ -529,8 +527,6 @@ loop do
                         $quantity = position_amount.to_s[0, $quantity_size]
 
                     end
-
-                    puts $quantity
 
                     create_take_profit()
 
