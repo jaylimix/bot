@@ -454,7 +454,7 @@ loop do
         
             $entry_quantity = quantity.to_s
 
-            $price_after_x_percent = close_of_previous_bar * 1.002
+            $price_after_x_percent = close_of_previous_bar * 1.005
 
             print_out($pair)
             
@@ -512,8 +512,6 @@ loop do
 
                 puts position_amount
 
-                $quantity = position_amount.to_s
-
                 $multiplier = 1
 
                 start = 0
@@ -524,13 +522,17 @@ loop do
 
                     if start == 1
 
-                        create_take_profit_market()
+                        $quantity = (position_amount * 2).to_s[0, $quantity_size]
 
                     else
 
-                        create_take_profit()
+                        $quantity = position_amount.to_s[0, $quantity_size]
 
                     end
+
+                    puts $quantity
+
+                    create_take_profit()
 
                     $multiplier += 1
             
@@ -684,35 +686,6 @@ def create_take_profit()
         
     end
 
-end
-
-def create_take_profit_market()
-
-    $type = 'POST'
-
-    $end_point = '/fapi/v1/order'
-
-    $extra = '&closePosition=true&side=BUY&type=TAKE_PROFIT_MARKET&price=' + $tp_price.to_s[0, $cap]
-
-    result = execute()
-
-    if result.empty?
-
-        puts 'Empty create take profit market'
-    
-    elsif result == 'error'
-
-        puts 'Error create take profit market'
-
-    elsif result.has_key?('code')
-
-        puts result
-
-    else
-
-        puts 'Created take profit market'
-        
-    end
 end
 
 def create_stop_loss()
