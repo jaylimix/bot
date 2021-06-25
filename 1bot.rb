@@ -556,13 +556,11 @@ loop do
 
                 if open_order['type'] == 'STOP_MARKET'
 
-                    stop_price = open_order['stopPrice'].to_f
+                    stop_price = open_order['stopPrice'][0, $cap]
 
-                    $position_entry_price = position_risk[0]['entryPrice'].to_f
+                    $position_entry_price = position_risk[0]['entryPrice'][0, $cap]
 
-                    the_difference = (stop_price - $position_entry_price).abs
-
-                    if the_difference / $position_entry_price > 0.005
+                    if stop_price != $position_entry_price
 
                         $old_order_id = open_order['orderId']
 
@@ -751,7 +749,7 @@ def adjust_stop_loss()
 
     $end_point = '/fapi/v1/order'
 
-    $extra = '&stopPrice=' + $position_entry_price.to_s[0, $cap] + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
+    $extra = '&stopPrice=' + $position_entry_price + '&side=BUY&type=STOP_MARKET' + '&closePosition=true'
 
     result = execute()
 
