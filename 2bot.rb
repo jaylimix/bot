@@ -678,7 +678,7 @@ def create_take_profit()
 
     else
 
-        puts 'Created take profit'
+        puts $tp_price.to_s[0, $cap]
         
     end
 
@@ -739,7 +739,7 @@ def limit_entry_create_stop_loss()
 
     else
 
-        puts 'Stop loss order created'
+        puts $stop_price.to_s[0, $cap]
         
     end
 
@@ -758,18 +758,18 @@ def adjust_stop_loss()
     if result.empty?
         
         print_out($pair)
-        puts 'empty'
+        puts 'Adjust stop loss empty'
 
     elsif result == 'error'
 
         print_out($pair)
-        puts 'error'
+        puts 'Adjust stop loss error'
 
     elsif result.has_key?('code')
 
         print_out($pair)
         puts result
-        puts $extra
+        puts 'Adjust stop loss'
 
     else
 
