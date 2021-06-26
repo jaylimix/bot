@@ -537,12 +537,12 @@ loop do
                 end
             end
             
-            #############################################
-            # Go to next when open orders is still 11
-            # Go to next when an order just got triggered
-            #############################################
+            ##############################################
+            # Go to next when first limit order is not hit
+            # Go to next when order just got triggered
+            ##############################################
 
-            if $open_orders.count >= 11 || $open_orders.count == 1
+            if $open_orders.count == 11 || $open_orders.count == 1
                 
                 next
 
