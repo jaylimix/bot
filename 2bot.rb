@@ -57,24 +57,6 @@ loop do
 
         quantity = (50 / $ticker_price)
 
-        max_position_size = 100
-
-        min_position_size = 20
-
-        if $ticker_price * quantity >= max_position_size
-
-            print_out($pair + '  MORE than $' + max_position_size.to_s)
-
-            next
-
-        end
-
-        if $ticker_price * quantity < min_position_size
-
-            print_out($pair + ' LESS than $' + min_position_size.to_s)
-
-        end
-
         ############
         # Get Klines
         ############
@@ -112,91 +94,99 @@ loop do
 
         total_6 = 0
 
-        kc1 = klines.count-1
+        counter = 0
 
-        kc2 = klines.count-2
+        until counter == 100 do
 
-        kc3 = klines.count-3
-
-        kc4 = klines.count-4
-
-        kc5 = klines.count-5
-
-        until kc1 == 5 do
-
-            kc1 -= 1
-
-            close_of_previous_bar = klines[kc1][4]
+            close_of_previous_bar = klines[counter][4]
 
             total_1 += close_of_previous_bar.to_f
-            
+
+            counter += 1
+
         end
 
-        ma_1 = total_1 / 100
+        counter = 1
 
-        ########################
+        until counter == 101 do
 
-        until kc2 == 4 do
-
-            kc2 -= 1
-
-            close_of_previous_bar = klines[kc2][4]
+            close_of_previous_bar = klines[counter][4]
 
             total_2 += close_of_previous_bar.to_f
-            
+
+            counter += 1
+
         end
 
-        ma_2 = total_2 / 100
+        counter = 2
 
-        #######################
+        until counter == 102 do
 
-        until kc3 == 3 do
-
-            kc3 -= 1
-
-            close_of_previous_bar = klines[kc3][4]
+            close_of_previous_bar = klines[counter][4]
 
             total_3 += close_of_previous_bar.to_f
-            
+
+            counter += 1
+
         end
 
-        ma_3 = total_3 / 100
+        counter = 3
 
-        #######################
+        until counter == 103 do
 
-        until kc4 == 2 do
-
-            kc4 -= 1
-
-            close_of_previous_bar = klines[kc4][4]
+            close_of_previous_bar = klines[counter][4]
 
             total_4 += close_of_previous_bar.to_f
-            
+
+            counter += 1
+
         end
 
-        ma_4 = total_4 / 100
+        counter = 4
 
-        #######################
+        until counter == 104 do
 
-        until kc5 == 1 do
-
-            kc5 -= 1
-
-            close_of_previous_bar = klines[kc5][4]
+            close_of_previous_bar = klines[counter][4]
 
             total_5 += close_of_previous_bar.to_f
-            
+
+            counter += 1
+
         end
 
-        ma_5 = total_5 / 100
+        if total_1 > total_2 && total_2 > total_3 && total_3 > total_4 && total_4 > total_5
 
-        if ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
-
-            # puts $pair + ' has a downward 200 moving average for the past 5 hours'
+            # puts $pair + ' has a downward 100 moving average for the past 5 hours'
 
         else
 
             next
+
+        end
+
+        ############################################
+        # Go next when two consecutive green candles
+        ############################################
+
+        key_of_previous_bar = klines.count - 2
+
+        open_of_previous_bar = klines[key_of_previous_bar][1]
+
+        close_of_previous_bar = klines[key_of_previous_bar][4]
+
+        if close_of_previous_bar.to_f > open_of_previous_bar.to_f
+
+            key_of_previous_2x_bar = klines.count - 3
+
+            open_of_previous_2x_bar = klines[key_of_previous_2x_bar][1]
+
+            close_of_previous_2x_bar = klines[key_of_previous_2x_bar][4]
+
+            if close_of_previous_2x_bar.to_f > open_of_previous_2x_bar.to_f
+
+                next
+
+            end
 
         end
 
