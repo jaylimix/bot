@@ -32,31 +32,6 @@ loop do
 
         # end
 
-        ##################
-        # Get Ticker Price
-        ##################
-
-        $type = 'GET'
-
-        $end_point = '/fapi/v1/ticker/price'
-
-        ticker_array = execute()
-
-        if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
-            # print_out('cannot get ticker price for ' + $pair)
-            next
-        end
-
-        $ticker_price = (ticker_array['price']).to_f
-
-        if $ticker_price > 50
-
-            next
-
-        end
-
-        quantity = (50 / $ticker_price)
-
         ############
         # Get Klines
         ############
@@ -70,7 +45,6 @@ loop do
         klines = execute()
 
         if klines.empty? || klines == 'error' || klines.include?('code')
-            # print_out('cannot get klines for ' + $pair)
             next
         end
 
@@ -201,7 +175,6 @@ loop do
         position_risk = execute()
 
         if position_risk.include?('code') || position_risk == 'error' || position_risk.empty?
-            # print_out('cannot get position risk for ' + $pair)
             next
         end
 
@@ -235,17 +208,31 @@ loop do
         $open_orders = execute()
 
         if $open_orders == 'error' || $open_orders.include?('code') # API returns empty when no open orders
-            # print_out('cannot get open orders for ' + $pair)
             next
         end
 
-        #############################################
-        # Set Stop Loss, Take Profit, Global Quantity
-        #############################################
+        ##################
+        # Get Ticker Price
+        ##################
 
-        $stop_price = $ticker_price + $average_range
+        $type = 'GET'
 
-        $stop_price = $stop_price.to_s[0, $cap]
+        $end_point = '/fapi/v1/ticker/price'
+
+        ticker_array = execute()
+
+        if ticker_array.empty? || ticker_array == 'error' || ticker_array.include?('code')
+            next
+        end
+
+        $ticker_price = (ticker_array['price']).to_f
+
+        quantity = (50 / $ticker_price)
+
+        ##################
+        # If no position 
+        # If have position
+        ##################
 
         if position_amount == 0
 
@@ -487,6 +474,10 @@ loop do
             if stop_loss_does_not_exist
 
                 print_out($pair)
+
+                $stop_price = $ticker_price + $average_range
+
+                $stop_price = $stop_price.to_s[0, $cap]
 
                 create_stop_loss()
 
