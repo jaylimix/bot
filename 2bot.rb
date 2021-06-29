@@ -83,7 +83,7 @@ loop do
 
         $end_point = '/fapi/v1/klines'
 
-        $extra = '&interval=' + $interval + '&limit=205'
+        $extra = '&interval=' + $interval + '&limit=105'
 
         klines = execute()
 
@@ -92,7 +92,7 @@ loop do
             next
         end
 
-        if klines.count != 205
+        if klines.count != 105
             next
         end
 
@@ -132,7 +132,7 @@ loop do
             
         end
 
-        ma_1 = total_1 / 200
+        ma_1 = total_1 / 100
 
         ########################
 
@@ -146,7 +146,7 @@ loop do
             
         end
 
-        ma_2 = total_2 / 200
+        ma_2 = total_2 / 100
 
         #######################
 
@@ -160,7 +160,7 @@ loop do
             
         end
 
-        ma_3 = total_3 / 200
+        ma_3 = total_3 / 100
 
         #######################
 
@@ -174,7 +174,7 @@ loop do
             
         end
 
-        ma_4 = total_4 / 200
+        ma_4 = total_4 / 100
 
         #######################
 
@@ -188,7 +188,7 @@ loop do
             
         end
 
-        ma_5 = total_5 / 200
+        ma_5 = total_5 / 100
 
         if ma_1 < ma_2 && ma_2 < ma_3 && ma_4 < ma_5
 

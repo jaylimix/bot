@@ -74,7 +74,7 @@ $coin_quantity_cap = [
     ['OGN', 2, 6], 
     ['LINA', 4, 7], 
     ['RVN', 3, 7], 
-    ['MANA', 3, 6], 
+    ['MANA', 2, 6], 
     ['HBAR', 3, 7], 
     ['ALICE', 2, 5], 
     ['UNFI', 3, 5], 
