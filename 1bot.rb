@@ -40,7 +40,7 @@ loop do
 
         $end_point = '/fapi/v1/klines'
 
-        $extra = '&interval=' + $interval + '&limit=105'
+        $extra = '&interval=' + $interval + '&limit=155'
 
         klines = execute()
 
@@ -48,7 +48,7 @@ loop do
             next
         end
 
-        if klines.count != 105
+        if klines.count != 155
             next
         end
 
@@ -70,7 +70,7 @@ loop do
 
         counter = 0
 
-        until counter == 100 do
+        until counter == 150 do
 
             close_of_previous_bar = klines[counter][4]
 
@@ -82,7 +82,7 @@ loop do
 
         counter = 1
 
-        until counter == 101 do
+        until counter == 151 do
 
             close_of_previous_bar = klines[counter][4]
 
@@ -94,7 +94,7 @@ loop do
 
         counter = 2
 
-        until counter == 102 do
+        until counter == 152 do
 
             close_of_previous_bar = klines[counter][4]
 
@@ -106,7 +106,7 @@ loop do
 
         counter = 3
 
-        until counter == 103 do
+        until counter == 153 do
 
             close_of_previous_bar = klines[counter][4]
 
@@ -118,7 +118,7 @@ loop do
 
         counter = 4
 
-        until counter == 104 do
+        until counter == 154 do
 
             close_of_previous_bar = klines[counter][4]
 
@@ -226,8 +226,6 @@ loop do
         end
 
         $ticker_price = (ticker_array['price']).to_f
-
-        quantity = (50 / $ticker_price)
 
         ##################
         # If no position 
@@ -417,7 +415,7 @@ loop do
                 
             end
 
-            if count_compare_highest <= 20
+            if count_compare_highest <= 10
                 next
             end
 
@@ -428,8 +426,8 @@ loop do
             $type = 'POST'
         
             $end_point = '/fapi/v1/order'
-        
-            $entry_quantity = quantity.to_s
+
+            $entry_quantity = (50 / $ticker_price).to_s
 
             $price_after_x_percent = close_of_previous_bar * 1.005
 
