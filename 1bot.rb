@@ -415,7 +415,7 @@ loop do
                 
             end
 
-            if count_compare_highest <= 10
+            if count_compare_highest <= 20
                 next
             end
 
@@ -433,14 +433,10 @@ loop do
 
             print_out($pair)
             
-            result = open_new_limit_order()
+            open_new_limit_order()
 
-            if result.include?('orderId')
-
-                limit_entry_create_stop_loss()
+            limit_entry_create_stop_loss()
        
-            end
-
         end
         
         if position_amount != 0
@@ -481,23 +477,25 @@ loop do
 
             end
 
+            start = 0
+
+            end_of_start = 3
+
             if take_profit_does_not_exist
 
                 print_out($pair)
 
                 entry_price = position_risk[0]['entryPrice'].to_f
 
-                position_amount = position_risk[0]['positionAmt'].to_f.abs / 10
+                position_amount = position_risk[0]['positionAmt'].to_f.abs / end_of_start
 
                 $multiplier = 1
 
-                start = 0
-
-                until start == 10 do
+                until start == end_of_start do
 
                     $tp_price = entry_price - $average_range * $multiplier
 
-                    if start == 9
+                    if start == end_of_start - 1
 
                         $quantity = (position_amount * 2).to_s[0, $quantity_size]
 
@@ -521,7 +519,7 @@ loop do
             # Go to next when order just got triggered
             ##############################################
 
-            if $open_orders.count == 11 || $open_orders.count == 1
+            if $open_orders.count == end_of_start + 1 || $open_orders.count == 1
                 
                 next
 
@@ -624,9 +622,9 @@ def open_new_limit_order()
 
     else
 
-        puts 'Create sell limit order'
+        puts 'Create sell limit order and stop loss'
 
-        return result
+        puts $price_after_x_percent.to_s[0, $cap]
         
     end
 end
@@ -737,12 +735,7 @@ def adjust_stop_loss()
         print_out($pair)
         puts 'Adjust stop loss empty'
 
-    elsif result == 'error'
-
-        print_out($pair)
-        puts 'Adjust stop loss error'
-
-    elsif result.has_key?('code')
+    elsif result.has_key?('code') || result == 'error'
 
         print_out($pair)
         puts result
