@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"os"
 	"strconv"
+	"time"
 )
 
 var base_url string = "https://fapi.binance.com"
@@ -49,7 +50,10 @@ func main() {
 
 	for _, v := range exchange.Symbols {
 
-		fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
+		if v.Symbol == "BTCSTUSDT" {
+			continue
+		}
+		// fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
 
 		run_http("get", "/fapi/v1/ticker/price?symbol="+v.Symbol, "ticker")
 
@@ -59,13 +63,32 @@ func main() {
 
 		parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
 
-		fmt.Println(the_number_of_times_the_current_candle_is_longer_than_others)
+		if the_number_of_times_the_current_candle_is_longer_than_others >= 95 {
 
-		if the_number_of_times_the_current_candle_is_longer_than_others >= 90 {
-			fmt.Println("the_number_of_times_the_current_candle_is_longer_than_others by 90 times")
+			// fmt.Println("Longer than others by 90 times")
+			fmt.Println(the_number_of_times_the_current_candle_is_longer_than_others)
+			fmt.Println(v.Symbol)
+			dt := time.Now()
+			fmt.Println(dt.Format("2006.01.02 15"))
+
+			if green_candle {
+				fmt.Println("LONG LONG LONG")
+			}
+
+			if red_candle {
+				fmt.Println("SHORT SHORT SHORT")
+			}
+
+			fmt.Println()
 		}
 
-		break
+		// RESET COUNTER TO 0 FOR NEXT PAIR
+		// RESET GREEN AND RED CANDLES
+		the_number_of_times_the_current_candle_is_longer_than_others = 0
+		green_candle = false
+		red_candle = false
+
+		// break
 	}
 
 }
