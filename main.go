@@ -49,7 +49,7 @@ func main() {
 
 	for _, v := range exchange.Symbols {
 
-		if v.Symbol == "BTCSTUSDT" {
+		if v.Symbol == "BTCSTUSDT" || v.Symbol == "XRPBUSD" || v.Symbol == "BTCBUSD" || v.Symbol == "ETHBUSD" {
 			continue
 		}
 
@@ -59,11 +59,15 @@ func main() {
 
 		// fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
 
-		run_http("get", "/fapi/v1/ticker/price?symbol="+v.Symbol, "ticker")
+		if run_http("get", "/fapi/v1/ticker/price?symbol="+v.Symbol, "ticker") {
+			continue
+		}
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		run_http("get", "/fapi/v1/klines?limit=100&interval=1h&symbol="+v.Symbol, "klines")
+		if run_http("get", "/fapi/v1/klines?limit=100&interval=1h&symbol="+v.Symbol, "klines") {
+			continue
+		}
 
 		parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
 
@@ -99,7 +103,7 @@ func main() {
 	main()
 }
 
-func run_http(http_type string, endpoint string, identifier string) {
+func run_http(http_type string, endpoint string, identifier string) bool {
 
 	var response *http.Response
 
@@ -110,9 +114,11 @@ func run_http(http_type string, endpoint string, identifier string) {
 	}
 
 	if err != nil {
+
 		fmt.Println(err.Error())
 		// os.Exit(1)
-		main()
+		// main()
+		return true
 	}
 
 	responseData, err := ioutil.ReadAll(response.Body)
@@ -133,6 +139,7 @@ func run_http(http_type string, endpoint string, identifier string) {
 	if identifier == "klines" {
 		json.Unmarshal([]byte(res), &klines)
 	}
+	return false
 }
 
 func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
@@ -150,7 +157,7 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
 		// open, _ := strconv.ParseFloat(klines[i][1], 32)
 		high, _ := strconv.ParseFloat(klines[i][2], 32)
 		low, _ := strconv.ParseFloat(klines[i][3], 32)
-		// close, _ := strconv.ParseFloat(candle_info[4], 32)
+		// close, _ := strconv.ParseFloat(klines[i][4], 32)
 
 		// fmt.Println(ticker_price)
 
@@ -162,43 +169,37 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
 
 		if current_candle {
 
-			// fmt.Println("Current candle")
-			// fmt.Println(open)
-			// fmt.Println(high)
-			// fmt.Println(low)
+			length_of_low_to_ticker := math.Abs(ticker_price - low)
 
-			// if ticker_price > open {
-			// 	// CURRENT CANDLE IS GREEN
-			// 	// COMPARE LOW WITH TICKER PRICE
+			length_of_ticker_to_high := math.Abs(ticker_price - high)
 
-			// 	green_candle = true
-
-			// 	current_candle_length = math.Abs(ticker_price - low)
-			// }
-			// if ticker_price < open {
-			// 	// CURRENT CANDLE IS RED
-			// 	// COMPARED HIGH WITH TICKER PRICE
-
-			// 	red_candle = true
-
-			// 	current_candle_length = math.Abs(ticker_price - high)
-			// }
-
-			// fmt.Println(current_candle_length)
-
-			if ticker_price > low {
+			if length_of_low_to_ticker > length_of_ticker_to_high {
 
 				long = true
 
-				current_candle_length = math.Abs(ticker_price - low)
+				current_candle_length = length_of_low_to_ticker
 			}
 
-			if ticker_price < high {
+			if length_of_ticker_to_high > length_of_low_to_ticker {
 
 				short = true
 
-				current_candle_length = math.Abs(ticker_price - high)
+				current_candle_length = length_of_ticker_to_high
 			}
+
+			// if ticker_price > open {
+
+			// 	long = true
+
+			// 	current_candle_length = math.Abs(ticker_price - low)
+			// }
+
+			// if ticker_price < open {
+
+			// 	short = true
+
+			// 	current_candle_length = math.Abs(ticker_price - high)
+			// }
 
 			current_candle = false
 
@@ -206,14 +207,8 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
 
 		} else {
 
-			// fmt.Println("Not current candle")
-			// fmt.Println(open)
-			// fmt.Println(high)
-			// fmt.Println(low)
-
 			other_candles_high_vs_low = math.Abs(high - low)
 
-			// fmt.Println(other_candles_high_vs_low)
 		}
 
 		if long || short {
