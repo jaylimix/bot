@@ -37,8 +37,6 @@ var ticker_price float64
 
 var current_candle_length float64
 
-// var the_number_of_times_the_current_candle_is_longer_than_others int
-
 var long bool
 
 var short bool
@@ -71,18 +69,13 @@ func main() {
 			continue
 		}
 
-		current_candle_is_not_longer_than_all := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
-
-		// fmt.Println(v.Symbol, the_number_of_times_the_current_candle_is_longer_than_others)
-
-		// fmt.Println()
+		current_candle_is_not_longer_than_all := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(v.Symbol)
 
 		if current_candle_is_not_longer_than_all {
 			reset_variables_for_next_pair()
 			continue
 		}
 
-		fmt.Println(v.Symbol)
 		dt := time.Now()
 		fmt.Println(dt.Format("2006.01.02 15"))
 		fmt.Println(ticker_price)
@@ -104,7 +97,6 @@ func main() {
 }
 
 func reset_variables_for_next_pair() {
-	// the_number_of_times_the_current_candle_is_longer_than_others = 0
 	long = false
 	short = false
 }
@@ -146,13 +138,17 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 	return false
 }
 
-func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
+func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(symbol string) bool {
 
 	current_candle := true
 
 	var other_candles_high_vs_low float64
 
 	var current_candle_low float64
+
+	var length_of_low_to_ticker float64
+
+	var length_of_ticker_to_high float64
 
 	for i := len(klines) - 1; i >= 0; i-- {
 
@@ -165,30 +161,39 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 
 			current_candle_low = low
 
-			length_of_low_to_ticker := math.Abs(ticker_price - low)
+			if ticker_price-low == 0 {
 
-			length_of_ticker_to_high := math.Abs(ticker_price - high)
+				length_of_low_to_ticker = ticker_price
+
+			} else {
+
+				length_of_low_to_ticker = math.Abs(ticker_price - low)
+			}
+
+			if high-ticker_price == 0 {
+
+				length_of_ticker_to_high = ticker_price
+
+			} else {
+
+				length_of_ticker_to_high = math.Abs(ticker_price - high)
+			}
 
 			if length_of_low_to_ticker > length_of_ticker_to_high {
 
 				long = true
 
 				current_candle_length = length_of_low_to_ticker
+			}
 
-			} else if length_of_ticker_to_high > length_of_low_to_ticker {
+			if length_of_ticker_to_high > length_of_low_to_ticker {
 
 				short = true
 
 				current_candle_length = length_of_ticker_to_high
-
-			} else {
-
-				return true
 			}
 
 			current_candle = false
-
-			continue
 
 		} else {
 
@@ -205,16 +210,22 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 
 			if long && (current_candle_low-low)/low > 0.1 {
 
+				fmt.Println(symbol)
+
 				fmt.Println("Compare current low with last 10th candle low is already 10%")
 			}
 
 			if short && (low-current_candle_low)/low > 0.1 {
+
+				fmt.Println(symbol)
 
 				fmt.Println("Compare current low with last 10th candle low is already 10%")
 			}
 		}
 
 	}
+
+	fmt.Println(symbol)
 
 	return false
 }
