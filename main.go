@@ -69,13 +69,21 @@ func main() {
 			continue
 		}
 
-		current_candle_is_not_longer_than_all := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(v.Symbol)
+		current_candle_is_not_longer_than_most := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(v.Symbol)
 
-		if current_candle_is_not_longer_than_all {
+		if current_candle_is_not_longer_than_most {
 			reset_variables_for_next_pair()
 			continue
 		}
 
+		current_candle_is_overextended := is_the_current_candle_overextended(v.Symbol)
+
+		if current_candle_is_overextended {
+			reset_variables_for_next_pair()
+			continue
+		}
+
+		fmt.Println(v.Symbol)
 		dt := time.Now()
 		fmt.Println(dt.Format("2006.01.02 15"))
 		fmt.Println(ticker_price)
@@ -144,40 +152,18 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(symbol st
 
 	var other_candles_high_vs_low float64
 
-	var current_candle_low float64
-
-	var length_of_low_to_ticker float64
-
-	var length_of_ticker_to_high float64
+	var number_of_times_current_candle_is_longer_than_the_rest int
 
 	for i := len(klines) - 1; i >= 0; i-- {
 
-		// open, _ := strconv.ParseFloat(klines[i][1], 32)
 		high, _ := strconv.ParseFloat(klines[i][2], 32)
 		low, _ := strconv.ParseFloat(klines[i][3], 32)
-		// close, _ := strconv.ParseFloat(klines[i][4], 32)
 
 		if current_candle {
 
-			current_candle_low = low
+			length_of_ticker_to_high := math.Abs(ticker_price - high)
 
-			if ticker_price-low == 0 {
-
-				length_of_low_to_ticker = ticker_price
-
-			} else {
-
-				length_of_low_to_ticker = math.Abs(ticker_price - low)
-			}
-
-			if high-ticker_price == 0 {
-
-				length_of_ticker_to_high = ticker_price
-
-			} else {
-
-				length_of_ticker_to_high = math.Abs(ticker_price - high)
-			}
+			length_of_low_to_ticker := math.Abs(ticker_price - low)
 
 			if length_of_low_to_ticker > length_of_ticker_to_high {
 
@@ -193,39 +179,71 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(symbol st
 				current_candle_length = length_of_ticker_to_high
 			}
 
+			if !long && !short {
+
+				return true
+			}
+
 			current_candle = false
 
-		} else {
-
-			other_candles_high_vs_low = math.Abs(high - low)
+			continue
 
 		}
 
-		if current_candle_length < other_candles_high_vs_low {
+		other_candles_high_vs_low = math.Abs(high - low)
 
-			return true
+		if current_candle_length > other_candles_high_vs_low {
+
+			number_of_times_current_candle_is_longer_than_the_rest++
 		}
-
-		if i == len(klines)-10 {
-
-			if long && (current_candle_low-low)/low > 0.1 {
-
-				fmt.Println(symbol)
-
-				fmt.Println("Compare current low with last 10th candle low is already 10%")
-			}
-
-			if short && (low-current_candle_low)/low > 0.1 {
-
-				fmt.Println(symbol)
-
-				fmt.Println("Compare current low with last 10th candle low is already 10%")
-			}
-		}
-
 	}
 
-	fmt.Println(symbol)
+	if number_of_times_current_candle_is_longer_than_the_rest < 95 {
+
+		// fmt.Println(symbol)
+		// fmt.Println(number_of_times_current_candle_is_longer_than_the_rest)
+		return true
+	}
+
+	return false
+}
+
+func is_the_current_candle_overextended(symbol string) bool {
+
+	// THIS SECTION CHECKS WHETHER THE CURRENT CANDLE HAS OVEREXTENDED
+	// COMPARE TO THE LAST 10TH CANDLE, IF IT HAS ALREADY PUMP 10% THEN ALGO WILL PREVENT LONG
+	// COMPARE TO THE LAST 10TH CANDLE, IF IT HAS ALREADY DUMP 10% THEN ALGO WILL PREVENT SHORT
+	// CRITERIA IS THAT CURRENT CANDLE OPEN IS >= 10% COMPARED TO LAST 10TH CANDLE
+
+	current_candle_open, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
+
+	open_of_last_10th_candle, _ := strconv.ParseFloat(klines[len(klines)-10][1], 32)
+
+	if long && (current_candle_open-open_of_last_10th_candle)/open_of_last_10th_candle >= 0.1 {
+
+		fmt.Println(symbol)
+
+		dt := time.Now()
+
+		fmt.Println(dt.Format("2006.01.02 15"))
+
+		fmt.Println("Cannot long because the current open compared with the last 10th candle open is already 10%")
+
+		return true
+	}
+
+	if short && (open_of_last_10th_candle-current_candle_open)/open_of_last_10th_candle >= 0.1 {
+
+		fmt.Println(symbol)
+
+		dt := time.Now()
+
+		fmt.Println(dt.Format("2006.01.02 15"))
+
+		fmt.Println("Cannot short because the current open caompared with the last 10th candle open is already 10%")
+
+		return true
+	}
 
 	return false
 }
