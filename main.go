@@ -37,11 +37,13 @@ var ticker_price float64
 
 var current_candle_length float64
 
-var the_number_of_times_the_current_candle_is_longer_than_others int
+// var the_number_of_times_the_current_candle_is_longer_than_others int
 
 var long bool
 
 var short bool
+
+var limit string = "100"
 
 func main() {
 
@@ -53,7 +55,7 @@ func main() {
 			continue
 		}
 
-		// if v.Symbol != "AKROUSDT" {
+		// if v.Symbol != "COMPUSDT" {
 		// 	continue
 		// }
 
@@ -65,42 +67,46 @@ func main() {
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		if run_http("get", "/fapi/v1/klines?limit=100&interval=1h&symbol="+v.Symbol, "klines") {
+		if run_http("get", "/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+v.Symbol, "klines") {
 			continue
 		}
 
-		parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
+		current_candle_is_not_longer_than_all := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
 
-		if the_number_of_times_the_current_candle_is_longer_than_others >= 95 {
+		// fmt.Println(v.Symbol, the_number_of_times_the_current_candle_is_longer_than_others)
 
-			// fmt.Println("Longer than others by 90 times")
-			fmt.Println(the_number_of_times_the_current_candle_is_longer_than_others)
-			fmt.Println(v.Symbol)
-			dt := time.Now()
-			fmt.Println(dt.Format("2006.01.02 15"))
-			fmt.Println(ticker_price)
+		// fmt.Println()
 
-			if long {
-				fmt.Println("LONG LONG LONG")
-			}
-
-			if short {
-				fmt.Println("SHORT SHORT SHORT")
-			}
-
-			fmt.Println()
+		if current_candle_is_not_longer_than_all {
+			reset_variables_for_next_pair()
+			continue
 		}
 
-		// RESET COUNTER TO 0 FOR NEXT PAIR
-		// RESET LONG AND SHORT
-		the_number_of_times_the_current_candle_is_longer_than_others = 0
-		long = false
-		short = false
+		fmt.Println(v.Symbol)
+		dt := time.Now()
+		fmt.Println(dt.Format("2006.01.02 15"))
+		fmt.Println(ticker_price)
 
-		// break
+		if long {
+			fmt.Println("LONG LONG LONG")
+		}
+
+		if short {
+			fmt.Println("SHORT SHORT SHORT")
+		}
+
+		fmt.Println()
+
+		reset_variables_for_next_pair()
 	}
 
 	main()
+}
+
+func reset_variables_for_next_pair() {
+	// the_number_of_times_the_current_candle_is_longer_than_others = 0
+	long = false
+	short = false
 }
 
 func run_http(http_type string, endpoint string, identifier string) bool {
@@ -117,7 +123,6 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 		fmt.Println(err.Error())
 		// os.Exit(1)
-		// main()
 		return true
 	}
 
@@ -133,7 +138,6 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 		json.Unmarshal([]byte(res), &exchange)
 	}
 	if identifier == "ticker" {
-		// fmt.Println(res)
 		json.Unmarshal([]byte(res), &ticker)
 	}
 	if identifier == "klines" {
@@ -142,32 +146,24 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 	return false
 }
 
-func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
+func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 
 	current_candle := true
 
 	var other_candles_high_vs_low float64
 
-	// fmt.Println(len(klines))
-	// os.Exit(1)
+	var current_candle_low float64
 
 	for i := len(klines) - 1; i >= 0; i-- {
-		// for index, candle_info := range klines {
 
 		// open, _ := strconv.ParseFloat(klines[i][1], 32)
 		high, _ := strconv.ParseFloat(klines[i][2], 32)
 		low, _ := strconv.ParseFloat(klines[i][3], 32)
 		// close, _ := strconv.ParseFloat(klines[i][4], 32)
 
-		// fmt.Println(ticker_price)
-
-		// fmt.Println(close)
-
-		// fmt.Println(index)
-
-		// continue
-
 		if current_candle {
+
+			current_candle_low = low
 
 			length_of_low_to_ticker := math.Abs(ticker_price - low)
 
@@ -178,32 +174,21 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
 				long = true
 
 				current_candle_length = length_of_low_to_ticker
-			}
 
-			if length_of_ticker_to_high > length_of_low_to_ticker {
+			} else if length_of_ticker_to_high > length_of_low_to_ticker {
 
 				short = true
 
 				current_candle_length = length_of_ticker_to_high
+
+			} else {
+
+				return true
 			}
-
-			// if ticker_price > open {
-
-			// 	long = true
-
-			// 	current_candle_length = math.Abs(ticker_price - low)
-			// }
-
-			// if ticker_price < open {
-
-			// 	short = true
-
-			// 	current_candle_length = math.Abs(ticker_price - high)
-			// }
 
 			current_candle = false
 
-			// fmt.Println()
+			continue
 
 		} else {
 
@@ -211,11 +196,25 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() {
 
 		}
 
-		if long || short {
-			if current_candle_length > other_candles_high_vs_low {
+		if current_candle_length < other_candles_high_vs_low {
 
-				the_number_of_times_the_current_candle_is_longer_than_others++
+			return true
+		}
+
+		if i == len(klines)-10 {
+
+			if long && (current_candle_low-low)/low > 0.1 {
+
+				fmt.Println("Compare current low with last 10th candle low is already 10%")
+			}
+
+			if short && (low-current_candle_low)/low > 0.1 {
+
+				fmt.Println("Compare current low with last 10th candle low is already 10%")
 			}
 		}
+
 	}
+
+	return false
 }
