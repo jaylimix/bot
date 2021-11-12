@@ -7,6 +7,7 @@ import (
 	"log"
 	"math"
 	"net/http"
+	"reflect"
 	"strconv"
 	"time"
 )
@@ -43,6 +44,10 @@ var short bool
 
 var limit string = "100"
 
+var same_pair_same_hour = [][]string{}
+
+// var same_pair_same_hour_found bool
+
 func main() {
 
 	run_http("get", "/fapi/v1/exchangeInfo", "exchange")
@@ -53,9 +58,13 @@ func main() {
 			continue
 		}
 
-		// if v.Symbol != "COMPUSDT" {
+		// if v.Symbol != "BTCUSDT" {
 		// 	continue
 		// }
+
+		if same_pair_same_hour_found(v.Symbol) {
+			continue
+		}
 
 		// fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
 
@@ -89,10 +98,13 @@ func main() {
 		fmt.Println(ticker_price)
 
 		if long {
+
+			same_pair_same_hour = append(same_pair_same_hour, []string{v.Symbol, dt.Format("2006.01.02 15"), "LONG"})
 			fmt.Println("LONG LONG LONG")
 		}
 
 		if short {
+			same_pair_same_hour = append(same_pair_same_hour, []string{v.Symbol, dt.Format("2006.01.02 15"), "SHORT"})
 			fmt.Println("SHORT SHORT SHORT")
 		}
 
@@ -221,27 +233,59 @@ func is_the_current_candle_overextended(symbol string) bool {
 
 	if long && (current_candle_open-open_of_last_10th_candle)/open_of_last_10th_candle >= 0.1 {
 
-		fmt.Println(symbol)
+		// fmt.Println(symbol)
 
-		dt := time.Now()
+		// dt := time.Now()
 
-		fmt.Println(dt.Format("2006.01.02 15"))
+		// fmt.Println(dt.Format("2006.01.02 15"))
 
-		fmt.Println("Cannot long because the current open compared with the last 10th candle open is already 10%")
+		// fmt.Println("Cannot long because the current open compared with the last 10th candle open is already 10%")
 
 		return true
 	}
 
 	if short && (open_of_last_10th_candle-current_candle_open)/open_of_last_10th_candle >= 0.1 {
 
-		fmt.Println(symbol)
+		// fmt.Println(symbol)
 
-		dt := time.Now()
+		// dt := time.Now()
 
-		fmt.Println(dt.Format("2006.01.02 15"))
+		// fmt.Println(dt.Format("2006.01.02 15"))
 
-		fmt.Println("Cannot short because the current open caompared with the last 10th candle open is already 10%")
+		// fmt.Println("Cannot short because the current open caompared with the last 10th candle open is already 10%")
 
+		return true
+	}
+
+	return false
+}
+
+func same_pair_same_hour_found(symbol string) bool {
+
+	dt := time.Now()
+
+	var long_or_short_found bool
+
+	if len(same_pair_same_hour) > 0 {
+
+		for _, spsh := range same_pair_same_hour {
+
+			if reflect.DeepEqual(spsh, []string{symbol, dt.Format("2006.01.02 15"), "LONG"}) {
+				fmt.Println("LONG FOUND for " + symbol)
+				long_or_short_found = true
+				continue
+			}
+
+			if reflect.DeepEqual(spsh, []string{symbol, dt.Format("2006.01.02 15"), "SHORT"}) {
+				fmt.Println("SHORT FOUND for " + symbol)
+				long_or_short_found = true
+				continue
+			}
+
+		}
+	}
+
+	if long_or_short_found {
 		return true
 	}
 
