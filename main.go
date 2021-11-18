@@ -1,6 +1,9 @@
 package main
 
 import (
+	"crypto/hmac"
+	"crypto/sha256"
+	"encoding/hex"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -11,7 +14,8 @@ import (
 	"time"
 )
 
-var base_url string = "https://fapi.binance.com"
+// var base_url string = "https://fapi.binance.com"
+var base_url string = "https://testnet.binancefuture.com"
 
 var klines [][]string
 
@@ -43,65 +47,128 @@ var short bool
 
 var limit string = "100"
 
+var symbol string
+
+var usd_per_trade = 10.00
+
+var minimum_quantity_per_order float64
+
+var price_precision string
+
 func main() {
 
 	run_http("get", "/fapi/v1/exchangeInfo", "exchange")
 
 	for _, v := range exchange.Symbols {
 
-		if v.Symbol == "BTCSTUSDT" || v.Symbol == "XRPBUSD" || v.Symbol == "BTCBUSD" || v.Symbol == "ETHBUSD" {
-			continue
-		}
+		symbol = v.Symbol
 
-		// if v.Symbol != "BTCUSDT" {
+		// if symbol == "BTCSTUSDT" || symbol == "XRPBUSD" || symbol == "BTCBUSD" || symbol == "ETHBUSD" {
+		// 	continue
+		// }
+
+		// if symbol != "BTCUSDT" {
 		// 	continue
 		// }
 
 		// fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
 
-		if run_http("get", "/fapi/v1/ticker/price?symbol="+v.Symbol, "ticker") {
+		// os.Exit(1)
+
+		fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
+
+		if run_http("get", "/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
 		}
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		if run_http("get", "/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+v.Symbol, "klines") {
+		quantity_after_per_trade_divide_by_price := usd_per_trade / ticker_price
+
+		// fmt.Println(quantity_after_per_trade_divide_by_price)
+
+		// fmt.Println()
+
+		// minimum_quantity_per_order := 0.00
+
+		price_precision = strconv.Itoa(v.PricePrecision)
+
+		// fmt.Println(v.QuantityPrecision)
+
+		// fmt.Println(quantity_precision)
+
+		// break
+
+		if v.QuantityPrecision == 3 {
+			minimum_quantity_per_order = 0.001
+
+		} else if v.QuantityPrecision == 2 {
+			minimum_quantity_per_order = 0.01
+
+		} else if v.QuantityPrecision == 1 {
+			minimum_quantity_per_order = 0.1
+
+		} else {
+			minimum_quantity_per_order = 1
+		}
+
+		if quantity_after_per_trade_divide_by_price < minimum_quantity_per_order {
+			fmt.Println("Skip " + symbol)
+			fmt.Println()
 			continue
 		}
 
-		current_candle_is_not_longer_than_most := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(v.Symbol)
+		// fmt.Println()
+
+		// long = true
+
+		// break
+
+		// run_http("post", "/fapi/v1/order", "new_order")
+
+		// fmt.Println()
+
+		// run_http("post", "/fapi/v1/order", "stop_order")
+
+		// break
+
+		if run_http("get", "/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
+			continue
+		}
+
+		current_candle_is_not_longer_than_most := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
 
 		if current_candle_is_not_longer_than_most {
 			reset_variables_for_next_pair()
 			continue
 		}
 
-		current_candle_is_overextended := is_the_current_candle_overextended(v.Symbol)
+		current_candle_is_overextended := is_the_current_candle_overextended()
 
 		if current_candle_is_overextended {
 			reset_variables_for_next_pair()
 			continue
 		}
 
-		fmt.Println(v.Symbol)
+		fmt.Println(symbol)
 		dt := time.Now()
 		fmt.Println(dt.Format("2006.01.02 15"))
 		fmt.Println(ticker_price)
 
-		if long {
-			fmt.Println("LONG LONG LONG")
-		}
+		if long || short {
 
-		if short {
-			fmt.Println("SHORT SHORT SHORT")
+			run_http("post", "/fapi/v1/order", "new_order")
+
+			run_http("post", "/fapi/v1/order", "stop_order")
 		}
 
 		fmt.Println()
 
 		reset_variables_for_next_pair()
+
 	}
 
-	main()
+	// main()
 }
 
 func reset_variables_for_next_pair() {
@@ -117,6 +184,102 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 	if http_type == "get" {
 		response, err = http.Get(base_url + endpoint)
+	}
+
+	if http_type == "post" && identifier == "new_order" {
+
+		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+
+		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
+
+		var query_string string
+
+		if long {
+			fmt.Println("LONG LONG LONG")
+			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=0.05&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+		}
+
+		if short {
+			fmt.Println("SHORT SHORT SHORT")
+			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=0.05&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+		}
+
+		fmt.Println(query_string)
+
+		mac := hmac.New(sha256.New, []byte(api_secret))
+
+		mac.Write([]byte(query_string))
+
+		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
+
+		client := &http.Client{}
+
+		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		req.Header.Set("X-MBX-APIKEY", api_key)
+
+		response, err = client.Do(req)
+	}
+
+	if http_type == "post" && identifier == "stop_order" {
+
+		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+
+		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
+
+		var query_string string
+
+		var stopPrice string
+
+		var decimal_format string
+
+		if long {
+
+			fmt.Println("LONG Stop Order")
+
+			decimal_format = "%." + price_precision + "f"
+
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*0.97)
+
+			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=SELL&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+
+		}
+
+		if short {
+
+			fmt.Println("SHORT Stop Order")
+
+			decimal_format = "%." + price_precision + "f"
+
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*1.03)
+
+			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=BUY&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+
+		}
+
+		fmt.Println(query_string)
+
+		mac := hmac.New(sha256.New, []byte(api_secret))
+
+		mac.Write([]byte(query_string))
+
+		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
+
+		client := &http.Client{}
+
+		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		req.Header.Set("X-MBX-APIKEY", api_key)
+
+		response, err = client.Do(req)
 	}
 
 	if err != nil {
@@ -143,10 +306,17 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 	if identifier == "klines" {
 		json.Unmarshal([]byte(res), &klines)
 	}
+	if identifier == "new_order" {
+		fmt.Println(res)
+	}
+	if identifier == "stop_order" {
+		fmt.Println(res)
+	}
+
 	return false
 }
 
-func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(symbol string) bool {
+func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 
 	current_candle := true
 
@@ -208,7 +378,7 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest(symbol st
 	return false
 }
 
-func is_the_current_candle_overextended(symbol string) bool {
+func is_the_current_candle_overextended() bool {
 
 	// THIS SECTION CHECKS WHETHER THE CURRENT CANDLE HAS OVEREXTENDED
 	// COMPARE TO THE LAST 10TH CANDLE, IF IT HAS ALREADY PUMP 10% THEN ALGO WILL PREVENT LONG
