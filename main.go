@@ -49,11 +49,19 @@ var limit string = "100"
 
 var symbol string
 
-var usd_per_trade = 10.00
+var usd_per_trade = 60.00
 
 var minimum_quantity_per_order float64
 
 var price_precision string
+
+var quantity_precision string
+
+var stop_loss_percentage = 0.01 * 3
+
+var quantity_after_per_trade_divide_by_price float64
+
+var quantity string
 
 func main() {
 
@@ -83,15 +91,15 @@ func main() {
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		quantity_after_per_trade_divide_by_price := usd_per_trade / ticker_price
+		quantity_after_per_trade_divide_by_price = usd_per_trade / ticker_price
 
 		// fmt.Println(quantity_after_per_trade_divide_by_price)
 
 		// fmt.Println()
 
-		// minimum_quantity_per_order := 0.00
+		minimum_quantity_per_order := 0.00
 
-		price_precision = strconv.Itoa(v.PricePrecision)
+		// price_precision = strconv.Itoa(v.PricePrecision)
 
 		// fmt.Println(v.QuantityPrecision)
 
@@ -112,25 +120,25 @@ func main() {
 			minimum_quantity_per_order = 1
 		}
 
+		quantity_precision = strconv.Itoa(v.QuantityPrecision)
+
 		if quantity_after_per_trade_divide_by_price < minimum_quantity_per_order {
 			fmt.Println("Skip " + symbol)
 			fmt.Println()
 			continue
 		}
 
-		// fmt.Println()
+		// quantity = strconv.ParseFloat(quantity_after_per_trade_divide_by_price, 64)
 
-		// long = true
+		long = true
 
-		// break
+		run_http("post", "/fapi/v1/order", "new_order")
 
-		// run_http("post", "/fapi/v1/order", "new_order")
+		fmt.Println()
 
-		// fmt.Println()
+		run_http("post", "/fapi/v1/order", "stop_order")
 
-		// run_http("post", "/fapi/v1/order", "stop_order")
-
-		// break
+		break
 
 		if run_http("get", "/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
 			continue
@@ -194,14 +202,18 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 		var query_string string
 
+		decimal_format := "%." + quantity_precision + "f"
+
+		quantity = fmt.Sprintf(decimal_format, quantity_after_per_trade_divide_by_price)
+
 		if long {
 			fmt.Println("LONG LONG LONG")
-			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=0.05&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
 		if short {
 			fmt.Println("SHORT SHORT SHORT")
-			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=0.05&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
 		fmt.Println(query_string)
@@ -237,13 +249,15 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 		var decimal_format string
 
+		fmt.Println(stop_loss_percentage)
+
 		if long {
 
 			fmt.Println("LONG Stop Order")
 
 			decimal_format = "%." + price_precision + "f"
 
-			stopPrice = fmt.Sprintf(decimal_format, ticker_price*0.97)
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1-stop_loss_percentage))
 
 			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=SELL&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
@@ -255,7 +269,7 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 			decimal_format = "%." + price_precision + "f"
 
-			stopPrice = fmt.Sprintf(decimal_format, ticker_price*1.03)
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1+stop_loss_percentage))
 
 			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=BUY&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
