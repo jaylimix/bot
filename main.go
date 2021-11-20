@@ -29,6 +29,12 @@ type Exchange struct {
 	Symbols []Symbols
 }
 
+type Position struct {
+	PositionAmt string
+}
+
+var position []Position
+
 var exchange Exchange
 
 type Ticker struct {
@@ -67,9 +73,17 @@ func main() {
 
 	run_http("get", "/fapi/v1/exchangeInfo", "exchange")
 
+	// fmt.Println(exchange)
+
+	// os.Exit(1)
+
 	for _, v := range exchange.Symbols {
 
 		symbol = v.Symbol
+
+		// fmt.Println(symbol)
+
+		// break
 
 		// if symbol == "BTCSTUSDT" || symbol == "XRPBUSD" || symbol == "BTCBUSD" || symbol == "ETHBUSD" {
 		// 	continue
@@ -83,7 +97,11 @@ func main() {
 
 		// os.Exit(1)
 
-		fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
+		// fmt.Println(v.Symbol, v.PricePrecision, v.QuantityPrecision)
+
+		// fmt.Println(symbol + " NO a position")
+
+		// break
 
 		if run_http("get", "/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
@@ -93,19 +111,7 @@ func main() {
 
 		quantity_after_per_trade_divide_by_price = usd_per_trade / ticker_price
 
-		// fmt.Println(quantity_after_per_trade_divide_by_price)
-
-		// fmt.Println()
-
 		minimum_quantity_per_order := 0.00
-
-		// price_precision = strconv.Itoa(v.PricePrecision)
-
-		// fmt.Println(v.QuantityPrecision)
-
-		// fmt.Println(quantity_precision)
-
-		// break
 
 		if v.QuantityPrecision == 3 {
 			minimum_quantity_per_order = 0.001
@@ -123,22 +129,20 @@ func main() {
 		quantity_precision = strconv.Itoa(v.QuantityPrecision)
 
 		if quantity_after_per_trade_divide_by_price < minimum_quantity_per_order {
-			fmt.Println("Skip " + symbol)
-			fmt.Println()
+			// fmt.Println("Skip " + symbol)
+			// fmt.Println()
 			continue
 		}
 
-		// quantity = strconv.ParseFloat(quantity_after_per_trade_divide_by_price, 64)
+		// long = true
 
-		long = true
+		// run_http("post", "/fapi/v1/order", "new_order")
 
-		run_http("post", "/fapi/v1/order", "new_order")
+		// fmt.Println()
 
-		fmt.Println()
+		// run_http("post", "/fapi/v1/order", "stop_order")
 
-		run_http("post", "/fapi/v1/order", "stop_order")
-
-		break
+		// break
 
 		if run_http("get", "/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
 			continue
@@ -165,6 +169,11 @@ func main() {
 
 		if long || short {
 
+			if run_http("get", "/fapi/v2/positionRisk", "position") {
+				fmt.Println(symbol + " has a position")
+				continue
+			}
+
 			run_http("post", "/fapi/v1/order", "new_order")
 
 			run_http("post", "/fapi/v1/order", "stop_order")
@@ -190,11 +199,38 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 	var err error
 
-	if http_type == "get" {
+	if identifier == "exchange" || identifier == "ticker" || identifier == "klines" {
 		response, err = http.Get(base_url + endpoint)
 	}
 
-	if http_type == "post" && identifier == "new_order" {
+	if identifier == "position" {
+
+		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+
+		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
+
+		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+
+		mac := hmac.New(sha256.New, []byte(api_secret))
+
+		mac.Write([]byte(query_string))
+
+		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
+
+		client := &http.Client{}
+
+		req, err := http.NewRequest("GET", base_url+endpoint+"?"+query_string+signature, nil)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		req.Header.Set("X-MBX-APIKEY", api_key)
+
+		response, err = client.Do(req)
+	}
+
+	if identifier == "new_order" {
 
 		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
 
@@ -216,7 +252,7 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
-		fmt.Println(query_string)
+		// fmt.Println(query_string)
 
 		mac := hmac.New(sha256.New, []byte(api_secret))
 
@@ -237,7 +273,7 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 		response, err = client.Do(req)
 	}
 
-	if http_type == "post" && identifier == "stop_order" {
+	if identifier == "stop_order" {
 
 		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
 
@@ -305,26 +341,43 @@ func run_http(http_type string, endpoint string, identifier string) bool {
 
 	responseData, err := ioutil.ReadAll(response.Body)
 
+	// fmt.Println(responseData)
+
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	res := string(responseData)
+	// res := string(responseData)
+	// fmt.Println(res)
 
 	if identifier == "exchange" {
-		json.Unmarshal([]byte(res), &exchange)
+		json.Unmarshal(responseData, &exchange)
 	}
 	if identifier == "ticker" {
-		json.Unmarshal([]byte(res), &ticker)
+		json.Unmarshal(responseData, &ticker)
 	}
 	if identifier == "klines" {
-		json.Unmarshal([]byte(res), &klines)
+		json.Unmarshal(responseData, &klines)
+	}
+	if identifier == "position" {
+
+		// fmt.Println(symbol)
+
+		// fmt.Println(string(responseData))
+
+		json.Unmarshal(responseData, &position)
+
+		if position[0].PositionAmt != "0.000" {
+			return true
+		}
+
+		// fmt.Println(position.PositionAmt)
 	}
 	if identifier == "new_order" {
-		fmt.Println(res)
+		fmt.Println(string(responseData))
 	}
 	if identifier == "stop_order" {
-		fmt.Println(res)
+		fmt.Println(string(responseData))
 	}
 
 	return false

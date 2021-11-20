@@ -17,9 +17,27 @@ func main() {
 
 	base_url := "https://testnet.binancefuture.com"
 
-	endpoint := "/fapi/v1/order"
+	endpoint := "/fapi/v1/batchOrders"
 
-	query_string := "symbol=BCHUSDT" + "&stopPrice=500.00" + "&closePosition=true&side=SELL&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+	batchOrders := `{
+		"batchOrders": [
+			{
+				"symbol":"BTCUSDT",
+				"side": "BUY",
+				"type": "MARKET",
+				"quantity": "0.001",
+			},
+			{
+				"symbol":"BTCUSDT",
+				"side": "SELL",
+				"type": "STOP_MARKET",
+				"reduceOnly": "false",
+				"closePosition": "true",
+				"stopPrice": "59000"
+			}
+	}`
+
+	query_string := batchOrders + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
 	api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
 
@@ -33,10 +51,10 @@ func main() {
 
 	client := &http.Client{}
 
-	req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+	req, err := http.NewRequest("POST", base_url+endpoint+"?batchOrders="+query_string+signature, nil)
 
 	if err != nil {
-		fmt.Println("#1")
+		fmt.Println(err)
 	}
 
 	req.Header.Set("X-MBX-APIKEY", api_key)
