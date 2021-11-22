@@ -17,6 +17,14 @@ import (
 // var base_url string = "https://fapi.binance.com"
 var base_url string = "https://testnet.binancefuture.com"
 
+var stop_loss_percentage = 0.01 * 3
+
+var usd_per_trade = 60.00
+
+var overextended_percent = 0.1
+
+var limit string = "100"
+
 var klines [][]string
 
 type Symbols struct {
@@ -56,19 +64,13 @@ var long bool
 
 var short bool
 
-var limit string = "100"
-
 var symbol string
-
-var usd_per_trade = 60.00
 
 var minimum_quantity_per_order float64
 
 var price_precision string
 
 var quantity_precision string
-
-var stop_loss_percentage = 0.01 * 3
 
 var quantity_after_per_trade_divide_by_price float64
 
@@ -150,11 +152,14 @@ func main() {
 
 		if long || short {
 
-			run_http("/fapi/v1/order", "new_order")
+			fmt.Println("Symbol is " + symbol)
 
-			fmt.Println()
+			new_order_created := run_http("/fapi/v1/order", "new_order")
 
-			run_http("/fapi/v1/order", "stop_order")
+			if new_order_created {
+				run_http("/fapi/v1/order", "stop_order")
+			}
+
 		}
 
 		fmt.Println()
@@ -261,8 +266,6 @@ func run_http(endpoint string, identifier string) bool {
 
 		var decimal_format string
 
-		fmt.Println(stop_loss_percentage)
-
 		if long {
 
 			fmt.Println("LONG Stop Order")
@@ -287,7 +290,7 @@ func run_http(endpoint string, identifier string) bool {
 
 		}
 
-		fmt.Println(query_string)
+		// fmt.Println(query_string)
 
 		mac := hmac.New(sha256.New, []byte(api_secret))
 
@@ -359,11 +362,29 @@ func run_http(endpoint string, identifier string) bool {
 	}
 
 	if identifier == "new_order" {
+
 		json.Unmarshal(responseData, &new_order)
+
+		if new_order.Symbol == "" {
+
+			fmt.Println(symbol + "  " + string(responseData))
+
+			return false
+		}
+
 		fmt.Println(new_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
+
+		return true
 	}
 	if identifier == "stop_order" {
 		json.Unmarshal(responseData, &stop_order)
+
+		if stop_order.Symbol == "" {
+
+			fmt.Println(symbol + "  " + string(responseData))
+
+		}
+
 		fmt.Println(stop_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
 		fmt.Println(stop_order.StopPrice)
 	}
@@ -442,12 +463,12 @@ func is_the_current_candle_overextended() bool {
 
 	open_of_last_x_candle, _ := strconv.ParseFloat(klines[len(klines)-20][1], 32)
 
-	if long && (current_candle_open-open_of_last_x_candle)/open_of_last_x_candle >= 0.1 {
+	if long && (current_candle_open-open_of_last_x_candle)/open_of_last_x_candle >= overextended_percent {
 
 		return true
 	}
 
-	if short && (open_of_last_x_candle-current_candle_open)/open_of_last_x_candle >= 0.1 {
+	if short && (open_of_last_x_candle-current_candle_open)/open_of_last_x_candle >= overextended_percent {
 
 		return true
 	}
