@@ -25,6 +25,10 @@ var overextended_percent = 0.1
 
 var limit string = "100"
 
+var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+
+var api_secret = "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
+
 var klines [][]string
 
 type Symbols struct {
@@ -188,10 +192,6 @@ func run_http(endpoint string, identifier string) bool {
 
 	if identifier == "position" {
 
-		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
-
-		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
-
 		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
 		mac := hmac.New(sha256.New, []byte(api_secret))
@@ -214,10 +214,6 @@ func run_http(endpoint string, identifier string) bool {
 	}
 
 	if identifier == "new_order" {
-
-		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
-
-		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
 
 		var query_string string
 
@@ -255,10 +251,6 @@ func run_http(endpoint string, identifier string) bool {
 	}
 
 	if identifier == "stop_order" {
-
-		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
-
-		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
 
 		var query_string string
 
@@ -312,10 +304,6 @@ func run_http(endpoint string, identifier string) bool {
 	}
 
 	if identifier == "account" {
-
-		api_key := "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
-
-		api_secret := "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
 
 		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
@@ -376,6 +364,7 @@ func run_http(endpoint string, identifier string) bool {
 
 		return true
 	}
+
 	if identifier == "stop_order" {
 		json.Unmarshal(responseData, &stop_order)
 
@@ -388,6 +377,7 @@ func run_http(endpoint string, identifier string) bool {
 		fmt.Println(stop_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
 		fmt.Println(stop_order.StopPrice)
 	}
+
 	if identifier == "account" {
 
 		json.Unmarshal(responseData, &account)
