@@ -23,6 +23,8 @@ var usd_per_trade = 60.00
 
 var overextended_percent = 0.1
 
+var close_position_hours_passed = int64(60 * 60 * 5)
+
 var limit string = "100"
 
 var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
@@ -44,6 +46,7 @@ type Exchange struct {
 type Positions struct {
 	Symbol      string
 	PositionAmt string
+	UpdateTime  int
 }
 
 type Account struct {
@@ -103,7 +106,12 @@ func main() {
 
 		symbol = v.Symbol
 
+		// update_time := 1637596323000
+
+		// consider_closing_this_position(symbol, update_time)
+
 		if this_symbol_already_has_open_position(symbol) {
+
 			continue
 		}
 
@@ -475,7 +483,9 @@ func this_symbol_already_has_open_position(symbol string) bool {
 		if value != 0.0 {
 
 			if symbol == position.Symbol {
-				// fmt.Println(symbol + " == " + position.Symbol)
+
+				consider_closing_this_position(position.Symbol, position.UpdateTime)
+
 				return true
 			}
 		}
@@ -483,4 +493,27 @@ func this_symbol_already_has_open_position(symbol string) bool {
 	}
 
 	return false
+}
+
+func consider_closing_this_position(symbol string, update_time int) {
+
+	update_time = update_time / 1000
+
+	time_diff := time.Now().Unix() - int64(update_time)
+
+	// fmt.Println(symbol)
+
+	// fmt.Println(strconv.Itoa(update_time))
+
+	// fmt.Println("Time now")
+
+	// fmt.Println(time.Now().Unix())
+
+	// fmt.Println("Time different")
+
+	if time_diff >= close_position_hours_passed {
+
+		fmt.Println("More than 5 hours has passed, time to close " + symbol)
+
+	}
 }
