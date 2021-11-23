@@ -14,8 +14,8 @@ import (
 	"time"
 )
 
-// var base_url string = "https://fapi.binance.com"
-var base_url string = "https://testnet.binancefuture.com"
+// var base_url = "https://fapi.binance.com"
+var base_url = "https://testnet.binancefuture.com"
 
 var stop_loss_percentage = 0.01 * 3
 
@@ -25,13 +25,11 @@ var overextended_percent = 0.1
 
 var close_position_hours_passed = int64(60 * 60 * 5)
 
-var limit string = "100"
+var limit = "100"
 
 var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
 
 var api_secret = "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
-
-var klines [][]string
 
 type Symbols struct {
 	Symbol            string
@@ -53,13 +51,24 @@ type Account struct {
 	Positions []Positions
 }
 
-var account Account
+type NewOrder struct {
+	Symbol string
+}
 
-var exchange Exchange
+type StopOrder struct {
+	Symbol    string
+	StopPrice string
+}
 
 type Ticker struct {
 	Price string
 }
+
+var klines [][]string
+
+var account Account
+
+var exchange Exchange
 
 var ticker Ticker
 
@@ -83,18 +92,11 @@ var quantity_after_per_trade_divide_by_price float64
 
 var quantity string
 
-type NewOrder struct {
-	Symbol string
-}
-
-type StopOrder struct {
-	Symbol    string
-	StopPrice string
-}
-
 var new_order NewOrder
 
 var stop_order StopOrder
+
+var stopPrice string
 
 func main() {
 
@@ -105,10 +107,6 @@ func main() {
 	for _, v := range exchange.Symbols {
 
 		symbol = v.Symbol
-
-		// update_time := 1637596323000
-
-		// consider_closing_this_position(symbol, update_time)
 
 		if this_symbol_already_has_open_position(symbol) {
 
@@ -186,6 +184,8 @@ func main() {
 func reset_variables_for_next_pair() {
 	long = false
 	short = false
+	new_order.Symbol = ""
+	stop_order.Symbol = ""
 }
 
 func run_http(endpoint string, identifier string) bool {
@@ -258,11 +258,46 @@ func run_http(endpoint string, identifier string) bool {
 		response, err = client.Do(req)
 	}
 
+	if identifier == "close_order" {
+
+		var side string
+
+		if long {
+
+			side = "SELL"
+		}
+
+		if short {
+
+			side = "BUY"
+		}
+
+		query_string := "symbol=" + symbol + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+
+		fmt.Print(query_string)
+
+		mac := hmac.New(sha256.New, []byte(api_secret))
+
+		mac.Write([]byte(query_string))
+
+		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
+
+		client := &http.Client{}
+
+		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		req.Header.Set("X-MBX-APIKEY", api_key)
+
+		response, err = client.Do(req)
+	}
+
 	if identifier == "stop_order" {
 
 		var query_string string
-
-		var stopPrice string
 
 		var decimal_format string
 
@@ -356,7 +391,6 @@ func run_http(endpoint string, identifier string) bool {
 	if identifier == "klines" {
 		json.Unmarshal(responseData, &klines)
 	}
-
 	if identifier == "new_order" {
 
 		json.Unmarshal(responseData, &new_order)
@@ -368,28 +402,38 @@ func run_http(endpoint string, identifier string) bool {
 			return false
 		}
 
+		// fmt.Println(string(responseData))
+
 		fmt.Println(new_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
 
 		return true
 	}
-
 	if identifier == "stop_order" {
+
 		json.Unmarshal(responseData, &stop_order)
 
 		if stop_order.Symbol == "" {
 
-			fmt.Println(symbol + "  " + string(responseData))
+			fmt.Println(symbol + " " + string(responseData))
 
+			fmt.Println(stopPrice)
+
+			return false
 		}
 
-		fmt.Println(stop_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
+		// fmt.Println(string(responseData))
+
+		fmt.Println(stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
 		fmt.Println(stop_order.StopPrice)
 	}
-
 	if identifier == "account" {
-
 		json.Unmarshal(responseData, &account)
+	}
+	if identifier == "close_order" {
 
+		fmt.Println(string(responseData))
+
+		fmt.Println()
 	}
 
 	return false
@@ -480,14 +524,11 @@ func this_symbol_already_has_open_position(symbol string) bool {
 
 		value, _ := strconv.ParseFloat(position.PositionAmt, 32)
 
-		if value != 0.0 {
+		if value != 0.0 && symbol == position.Symbol {
 
-			if symbol == position.Symbol {
+			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-				consider_closing_this_position(position.Symbol, position.UpdateTime)
-
-				return true
-			}
+			return true
 		}
 
 	}
@@ -495,25 +536,27 @@ func this_symbol_already_has_open_position(symbol string) bool {
 	return false
 }
 
-func consider_closing_this_position(symbol string, update_time int) {
+func consider_closing_this_position(symbol string, update_time int, amount string) {
 
 	update_time = update_time / 1000
 
 	time_diff := time.Now().Unix() - int64(update_time)
 
-	// fmt.Println(symbol)
-
-	// fmt.Println(strconv.Itoa(update_time))
-
-	// fmt.Println("Time now")
-
-	// fmt.Println(time.Now().Unix())
-
-	// fmt.Println("Time different")
-
 	if time_diff >= close_position_hours_passed {
 
-		fmt.Println("More than 5 hours has passed, time to close " + symbol)
+		if string(amount[0]) == "-" {
 
+			short = true
+
+			quantity = amount[1:]
+
+		} else {
+
+			long = true
+
+			quantity = amount
+		}
+
+		run_http("/fapi/v1/order", "close_order")
 	}
 }
