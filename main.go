@@ -108,6 +108,10 @@ func main() {
 
 		symbol = v.Symbol
 
+		price_precision = strconv.Itoa(v.PricePrecision)
+
+		quantity_precision = strconv.Itoa(v.QuantityPrecision)
+
 		if this_symbol_already_has_open_position(symbol) {
 
 			continue
@@ -135,8 +139,6 @@ func main() {
 		} else {
 			minimum_quantity_per_order = 1
 		}
-
-		quantity_precision = strconv.Itoa(v.QuantityPrecision)
 
 		if quantity_after_per_trade_divide_by_price < minimum_quantity_per_order {
 			continue
@@ -385,12 +387,15 @@ func run_http(endpoint string, identifier string) bool {
 	if identifier == "exchange" {
 		json.Unmarshal(responseData, &exchange)
 	}
+
 	if identifier == "ticker" {
 		json.Unmarshal(responseData, &ticker)
 	}
+
 	if identifier == "klines" {
 		json.Unmarshal(responseData, &klines)
 	}
+
 	if identifier == "new_order" {
 
 		json.Unmarshal(responseData, &new_order)
@@ -408,6 +413,7 @@ func run_http(endpoint string, identifier string) bool {
 
 		return true
 	}
+
 	if identifier == "stop_order" {
 
 		json.Unmarshal(responseData, &stop_order)
@@ -426,9 +432,11 @@ func run_http(endpoint string, identifier string) bool {
 		fmt.Println(stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
 		fmt.Println(stop_order.StopPrice)
 	}
+
 	if identifier == "account" {
 		json.Unmarshal(responseData, &account)
 	}
+
 	if identifier == "close_order" {
 
 		fmt.Println(string(responseData))
