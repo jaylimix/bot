@@ -14,12 +14,13 @@ import (
 	"time"
 )
 
-// var base_url = "https://fapi.binance.com"
-var base_url = "https://testnet.binancefuture.com"
+var base_url = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.01 * 3
+// var base_url = "https://testnet.binancefuture.com"
 
-var usd_per_trade = 60.00
+var stop_loss_percentage = 0.03
+
+var usd_per_trade = 1.00 * 60
 
 var overextended_percent = 0.1
 
@@ -108,6 +109,29 @@ func main() {
 
 		symbol = v.Symbol
 
+		switch symbol {
+		case "BTCUSDT_211231":
+			continue
+		case "ETHUSDT_211231":
+			continue
+		case "SOLBUSD":
+			continue
+		case "ADABUSD":
+			continue
+		case "FTTBUSD":
+			continue
+		case "XRPBUSD":
+			continue
+		case "DOGEBUSD":
+			continue
+		case "BNBBUSD":
+			continue
+		case "ETHBUSD":
+			continue
+		case "BTCBUSD":
+			continue
+		}
+
 		price_precision = strconv.Itoa(v.PricePrecision)
 
 		quantity_precision = strconv.Itoa(v.QuantityPrecision)
@@ -164,7 +188,7 @@ func main() {
 
 		if long || short {
 
-			fmt.Println("Symbol is " + symbol)
+			// fmt.Println("Symbol is " + symbol)
 
 			new_order_created := run_http("/fapi/v1/order", "new_order")
 
@@ -232,12 +256,12 @@ func run_http(endpoint string, identifier string) bool {
 		quantity = fmt.Sprintf(decimal_format, quantity_after_per_trade_divide_by_price)
 
 		if long {
-			fmt.Println("LONG LONG LONG")
+			// fmt.Println("LONG LONG LONG")
 			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
 		if short {
-			fmt.Println("SHORT SHORT SHORT")
+			// fmt.Println("SHORT SHORT SHORT")
 			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
@@ -402,7 +426,7 @@ func run_http(endpoint string, identifier string) bool {
 
 		if new_order.Symbol == "" {
 
-			fmt.Println(symbol + "  " + string(responseData))
+			// fmt.Println(symbol + "  " + string(responseData))
 
 			return false
 		}
@@ -422,6 +446,8 @@ func run_http(endpoint string, identifier string) bool {
 
 			fmt.Println(symbol + " " + string(responseData))
 
+			fmt.Println(ticker_price)
+
 			fmt.Println(stopPrice)
 
 			return false
@@ -430,6 +456,7 @@ func run_http(endpoint string, identifier string) bool {
 		// fmt.Println(string(responseData))
 
 		fmt.Println(stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
+
 		fmt.Println(stop_order.StopPrice)
 	}
 
