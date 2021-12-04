@@ -28,7 +28,7 @@ var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF
 
 var base_url = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.03
+var stop_loss_percentage = 0.01 * 5
 
 var usd_per_trade = 1.00 * 20
 
