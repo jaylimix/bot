@@ -12,25 +12,31 @@ import (
 	"net/http"
 	"strconv"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
-var base_url = "https://fapi.binance.com"
+// var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+
+var api_key = "Iv49dUKHcJ8rqypuu4SW9Xa0nLYgv75b2QtdvQtcIeP7EnhTkmRanZxtA8yQMMi7"
+
+// var api_secret = "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
+
+var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF0L"
 
 // var base_url = "https://testnet.binancefuture.com"
 
+var base_url = "https://fapi.binance.com"
+
 var stop_loss_percentage = 0.03
 
-var usd_per_trade = 1.00 * 60
+var usd_per_trade = 1.00 * 20
 
 var overextended_percent = 0.1
 
-var close_position_hours_passed = int64(60 * 60 * 5)
+var close_position_hours_passed = int64(60 * 60 * 10)
 
 var limit = "100"
-
-var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
-
-var api_secret = "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
 
 type Symbols struct {
 	Symbol            string
@@ -83,7 +89,7 @@ var short bool
 
 var symbol string
 
-var minimum_quantity_per_order float64
+// var minimum_quantity_per_order float64
 
 var price_precision string
 
@@ -99,7 +105,14 @@ var stop_order StopOrder
 
 var stopPrice string
 
+// func handleRequest () (string, error) {
+//     return "Hello from Go!", nil
+// }
 func main() {
+	lambda.Start(handleRequest)
+}
+
+func handleRequest() {
 
 	run_http("/fapi/v1/exchangeInfo", "exchange")
 
@@ -109,26 +122,28 @@ func main() {
 
 		symbol = v.Symbol
 
+		// fmt.Println(symbol)
+
 		switch symbol {
 		case "BTCUSDT_211231":
 			continue
 		case "ETHUSDT_211231":
 			continue
-		case "SOLBUSD":
+		case "SOLUSDT":
 			continue
-		case "ADABUSD":
+		case "ADAUSDT":
 			continue
-		case "FTTBUSD":
+		case "FTTUSDT":
 			continue
-		case "XRPBUSD":
+		case "XRPUSDT":
 			continue
-		case "DOGEBUSD":
+		case "DOGEUSDT":
 			continue
-		case "BNBBUSD":
+		case "BNBUSDT":
 			continue
-		case "ETHBUSD":
+		case "ETHUSDT":
 			continue
-		case "BTCBUSD":
+		case "BTCUSDT":
 			continue
 		}
 
@@ -204,7 +219,7 @@ func main() {
 
 	}
 
-	main()
+	// main()
 }
 
 func reset_variables_for_next_pair() {

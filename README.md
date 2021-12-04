@@ -6,6 +6,7 @@ This is a bot looks at the 1 hour chart and will:
 This bot will not:
 - open BUSD pair.
 - open pair that has minimum quantity more than usd_per_trade (adjustable), see line 23.
+  To ensure all pairs can be open, increase usd_per_trade.
 
 Preparation:
 - Set up Binance Futures, copy API key and secret and paste it on line 30 and 32.
