@@ -30,7 +30,7 @@ var base_url = "https://fapi.binance.com"
 
 var stop_loss_percentage = 0.01 * 5
 
-var usd_per_trade = 1.00 * 20
+var usd_per_trade = 1.00 * 50
 
 var overextended_percent = 0.1
 
@@ -89,8 +89,6 @@ var short bool
 
 var symbol string
 
-// var minimum_quantity_per_order float64
-
 var price_precision string
 
 var quantity_precision string
@@ -105,9 +103,6 @@ var stop_order StopOrder
 
 var stopPrice string
 
-// func handleRequest () (string, error) {
-//     return "Hello from Go!", nil
-// }
 func main() {
 	lambda.Start(handleRequest)
 }
@@ -121,8 +116,6 @@ func handleRequest() {
 	for _, v := range exchange.Symbols {
 
 		symbol = v.Symbol
-
-		// fmt.Println(symbol)
 
 		switch symbol {
 		case "BTCUSDT_211231":
@@ -203,8 +196,6 @@ func handleRequest() {
 
 		if long || short {
 
-			// fmt.Println("Symbol is " + symbol)
-
 			new_order_created := run_http("/fapi/v1/order", "new_order")
 
 			if new_order_created {
@@ -219,7 +210,6 @@ func handleRequest() {
 
 	}
 
-	// main()
 }
 
 func reset_variables_for_next_pair() {
@@ -591,6 +581,14 @@ func consider_closing_this_position(symbol string, update_time int, amount strin
 	update_time = update_time / 1000
 
 	time_diff := time.Now().Unix() - int64(update_time)
+
+	fmt.Println(symbol)
+
+	position_update_time := time.Unix(int64(update_time), 0)
+
+	fmt.Println(position_update_time)
+
+	fmt.Println(time.Now())
 
 	if time_diff >= close_position_hours_passed {
 
