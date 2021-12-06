@@ -28,13 +28,13 @@ var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF
 
 var base_url = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.01 * 5
+var stop_loss_percentage = 0.01 * 10
 
 var usd_per_trade = 1.00 * 50
 
 var overextended_percent = 0.1
 
-var close_position_hours_passed = int64(60 * 60 * 10)
+var close_position_hours_passed = int64(60 * 60 * 12)
 
 var limit = "100"
 
@@ -581,14 +581,6 @@ func consider_closing_this_position(symbol string, update_time int, amount strin
 	update_time = update_time / 1000
 
 	time_diff := time.Now().Unix() - int64(update_time)
-
-	fmt.Println(symbol)
-
-	position_update_time := time.Unix(int64(update_time), 0)
-
-	fmt.Println(position_update_time)
-
-	fmt.Println(time.Now())
 
 	if time_diff >= close_position_hours_passed {
 
