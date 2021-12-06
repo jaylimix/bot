@@ -28,13 +28,13 @@ var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF
 
 var base_url = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.01 * 5
+var stop_loss_percentage = 0.01 * 10
 
-var usd_per_trade = 1.00 * 20
+var usd_per_trade = 1.00 * 50
 
 var overextended_percent = 0.01 * 10
 
-var close_position_hours_passed = int64(60 * 60 * 10)
+var close_position_hours_passed = int64(60 * 60 * 12)
 
 var limit = "100"
 
@@ -103,8 +103,6 @@ var stop_order StopOrder
 
 var stopPrice string
 
-var netout = false
-
 func main() {
 	lambda.Start(handleRequest)
 }
@@ -118,8 +116,6 @@ func handleRequest() {
 	for _, v := range exchange.Symbols {
 
 		symbol = v.Symbol
-
-		// fmt.Println(symbol)
 
 		switch symbol {
 		case "BTCUSDT_211231":
@@ -200,12 +196,6 @@ func handleRequest() {
 
 		if long || short {
 
-			// fmt.Println("Symbol is " + symbol)
-
-			if symbol_already_has_open_position(symbol) {
-				continue
-			}
-
 			new_order_created := run_http("/fapi/v1/order", "new_order")
 
 			if new_order_created {
@@ -268,15 +258,6 @@ func run_http(endpoint string, identifier string) bool {
 		decimal_format := "%." + quantity_precision + "f"
 
 		quantity = fmt.Sprintf(decimal_format, quantity_after_per_trade_divide_by_price)
-
-		if netout {
-
-			quantity_in_float, _ := strconv.ParseFloat(quantity, 32)
-
-			quantity_in_float *= 2
-
-			quantity = fmt.Sprintf(decimal_format, quantity_in_float)
-		}
 
 		if long {
 			// fmt.Println("LONG LONG LONG")
@@ -587,35 +568,6 @@ func this_symbol_already_has_open_position(symbol string) bool {
 			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
 			return true
-		}
-	}
-
-	return false
-}
-
-func symbol_already_has_open_position(symbol string) bool {
-
-	for _, position := range account.Positions {
-
-		if symbol == position.Symbol {
-
-			position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
-
-			if position_amount > 0 && long || position_amount < 0 && short {
-
-				return true
-			}
-
-			if position_amount > 0 && short || position_amount < 0 && long {
-
-				fmt.Println("Open opposing direction for " + symbol)
-
-				netout = true
-
-				return false
-			}
-
-			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 		}
 	}
 
