@@ -149,6 +149,10 @@ func handleRequest() {
 			continue
 		}
 
+		// run_http("/fapi/v1/allOpenOrders", "cancel_order")
+
+		// continue
+
 		if run_http("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
 		}
@@ -325,6 +329,31 @@ func run_http(endpoint string, identifier string) bool {
 		response, err = client.Do(req)
 	}
 
+	if identifier == "cancel_order" {
+
+		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+
+		fmt.Print(query_string)
+
+		mac := hmac.New(sha256.New, []byte(api_secret))
+
+		mac.Write([]byte(query_string))
+
+		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
+
+		client := &http.Client{}
+
+		req, err := http.NewRequest("DELETE", base_url+endpoint+"?"+query_string+signature, nil)
+
+		if err != nil {
+			fmt.Println(err)
+		}
+
+		req.Header.Set("X-MBX-APIKEY", api_key)
+
+		response, err = client.Do(req)
+	}
+
 	if identifier == "stop_order" {
 
 		var query_string string
@@ -402,7 +431,7 @@ func run_http(endpoint string, identifier string) bool {
 	if err != nil {
 
 		fmt.Println(err.Error())
-		// os.Exit(1)
+
 		return true
 	}
 
@@ -430,12 +459,8 @@ func run_http(endpoint string, identifier string) bool {
 
 		if new_order.Symbol == "" {
 
-			// fmt.Println(symbol + "  " + string(responseData))
-
 			return false
 		}
-
-		// fmt.Println(string(responseData))
 
 		fmt.Println(new_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
 
@@ -457,8 +482,6 @@ func run_http(endpoint string, identifier string) bool {
 			return false
 		}
 
-		// fmt.Println(string(responseData))
-
 		fmt.Println(stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
 
 		fmt.Println(stop_order.StopPrice)
@@ -472,7 +495,11 @@ func run_http(endpoint string, identifier string) bool {
 
 		fmt.Println(string(responseData))
 
-		fmt.Println()
+		return true
+	}
+	if identifier == "cancel_order" {
+
+		fmt.Println(string(responseData))
 	}
 
 	return false
@@ -595,6 +622,10 @@ func consider_closing_this_position(symbol string, update_time int, amount strin
 			quantity = amount
 		}
 
-		run_http("/fapi/v1/order", "close_order")
+		if run_http("/fapi/v1/order", "close_order") {
+
+			run_http("/fapi/v1/allOpenOrders", "cancel_order")
+		}
+
 	}
 }
