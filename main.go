@@ -28,13 +28,13 @@ var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF
 
 var base_url = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.01 * 10
+var stop_loss_percentage = 0.10
 
-var usd_per_trade = 1.00 * 50
+var usd_per_trade = 50.00
 
-var overextended_percent = 0.01 * 10
+var overextended_percent = 0.07
 
-var close_position_hours_passed = int64(60 * 60 * 12)
+var close_position_hours_passed = int64(60 * 60 * 20)
 
 var limit = "100"
 
@@ -149,10 +149,6 @@ func handleRequest() {
 			continue
 		}
 
-		// run_http("/fapi/v1/allOpenOrders", "cancel_order")
-
-		// continue
-
 		if run_http("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
 		}
@@ -187,13 +183,13 @@ func handleRequest() {
 		current_candle_is_not_longer_than_most := parse_ohlc_then_compare_current_hours_candle_length_with_the_rest()
 
 		if current_candle_is_not_longer_than_most {
+
 			reset_variables_for_next_pair()
 			continue
 		}
 
-		current_candle_is_overextended := is_the_current_candle_overextended()
+		if current_candle_is_overextended() {
 
-		if current_candle_is_overextended {
 			reset_variables_for_next_pair()
 			continue
 		}
@@ -565,19 +561,21 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 	return false
 }
 
-func is_the_current_candle_overextended() bool {
+func current_candle_is_overextended() bool {
 
 	current_candle_open, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
 
-	open_of_last_x_candle, _ := strconv.ParseFloat(klines[len(klines)-20][1], 32)
+	open_of_last_x_candle, _ := strconv.ParseFloat(klines[len(klines)-25][1], 32)
 
-	if long && (current_candle_open-open_of_last_x_candle)/open_of_last_x_candle >= overextended_percent {
+	if long && (current_candle_open-open_of_last_x_candle)/open_of_last_x_candle >= overextended_percent { // (1.5 - 1.0) / 1.0
 
+		fmt.Println(time.Now().Format("2006.01.02 15") + " " + symbol + " is overextended and is long")
 		return true
 	}
 
-	if short && (open_of_last_x_candle-current_candle_open)/open_of_last_x_candle >= overextended_percent {
+	if short && (open_of_last_x_candle-current_candle_open)/current_candle_open >= overextended_percent { // (1.5 - 1.0) / 1.0
 
+		fmt.Println(time.Now().Format("2006.01.02 15") + " " + symbol + " is overextended and is short")
 		return true
 	}
 
