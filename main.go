@@ -34,7 +34,7 @@ var usd_per_trade = 50.00
 
 var overextended_percent = 0.07
 
-var close_position_hours_passed = int64(60 * 60 * 20)
+var close_position_hours_passed = int64(60 * 60 * 24)
 
 var limit = "100"
 
@@ -103,6 +103,8 @@ var stop_order StopOrder
 
 var stopPrice string
 
+var turn_off_opening_new_positions = false
+
 func main() {
 	lambda.Start(handleRequest)
 }
@@ -149,6 +151,11 @@ func handleRequest() {
 			continue
 		}
 
+		if turn_off_opening_new_positions {
+			reset_variables_for_next_pair()
+			continue
+		}
+
 		if run_http("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
 		}
@@ -188,8 +195,7 @@ func handleRequest() {
 			continue
 		}
 
-		if current_candle_is_overextended() {
-
+		if !slope_pattern_found() {
 			reset_variables_for_next_pair()
 			continue
 		}
@@ -260,12 +266,10 @@ func run_http(endpoint string, identifier string) bool {
 		quantity = fmt.Sprintf(decimal_format, quantity_after_per_trade_divide_by_price)
 
 		if long {
-			// fmt.Println("LONG LONG LONG")
 			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
 		if short {
-			// fmt.Println("SHORT SHORT SHORT")
 			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
@@ -561,22 +565,26 @@ func parse_ohlc_then_compare_current_hours_candle_length_with_the_rest() bool {
 	return false
 }
 
-func current_candle_is_overextended() bool {
+func slope_pattern_found() bool {
 
-	current_candle_open, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
+	open_of_a_candle, _ := strconv.ParseFloat(klines[len(klines)-25][1], 32)
 
-	open_of_last_x_candle, _ := strconv.ParseFloat(klines[len(klines)-25][1], 32)
+	open_of_b_candle, _ := strconv.ParseFloat(klines[len(klines)-13][1], 32)
 
-	if long && (current_candle_open-open_of_last_x_candle)/open_of_last_x_candle >= overextended_percent { // (1.5 - 1.0) / 1.0
+	open_current_candle, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
 
-		fmt.Println(time.Now().Format("2006.01.02 15") + " " + symbol + " is overextended and is long")
-		return true
+	if long {
+
+		if open_of_a_candle > open_of_b_candle && open_of_b_candle > open_current_candle {
+			return true
+		}
 	}
 
-	if short && (open_of_last_x_candle-current_candle_open)/current_candle_open >= overextended_percent { // (1.5 - 1.0) / 1.0
+	if short {
 
-		fmt.Println(time.Now().Format("2006.01.02 15") + " " + symbol + " is overextended and is short")
-		return true
+		if open_of_a_candle < open_of_b_candle && open_of_b_candle < open_current_candle {
+			return true
+		}
 	}
 
 	return false
