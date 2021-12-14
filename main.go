@@ -7,9 +7,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"log"
 	"math"
 	"net/http"
+	"os"
 	"strconv"
 	"time"
 
@@ -83,6 +83,8 @@ var long bool
 
 var short bool
 
+var side string
+
 var symbol string
 
 var price_precision string
@@ -113,14 +115,19 @@ func main() {
 
 func handleRequest() {
 
-	run_http("/fapi/v1/exchangeInfo", "exchange")
+	if !run_http("/fapi/v1/exchangeInfo", "exchange") {
+		os.Exit(1)
+	}
 
-	run_http("/fapi/v2/account", "account")
+	if !run_http("/fapi/v2/account", "account") {
+		os.Exit(1)
+	}
 
 	for _, v := range exchange.Symbols {
 
 		long = false
 		short = false
+		side = ""
 		new_order.Symbol = ""
 		stop_order.Symbol = ""
 		symbol = v.Symbol
@@ -212,35 +219,42 @@ func set_minimum_quantity_per_order(quantity_precision int) {
 
 func run_http(endpoint string, identifier string) bool {
 
-	var response *http.Response
-
-	var err error
-
 	if identifier == "exchange" || identifier == "ticker" || identifier == "klines" {
-		response, err = http.Get(base_url + endpoint)
-	}
 
-	if identifier == "position" {
-
-		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
-
-		mac := hmac.New(sha256.New, []byte(api_secret))
-
-		mac.Write([]byte(query_string))
-
-		signature := "&signature=" + hex.EncodeToString(mac.Sum(nil))
-
-		client := &http.Client{}
-
-		req, err := http.NewRequest("GET", base_url+endpoint+"?"+query_string+signature, nil)
+		response, err := http.Get(base_url + endpoint)
 
 		if err != nil {
-			fmt.Println(err)
+
+			fmt.Println(err.Error())
+
+			return false
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		response_data, err := ioutil.ReadAll(response.Body)
 
-		response, err = client.Do(req)
+		if err != nil {
+
+			fmt.Println(err.Error())
+
+			return false
+		}
+
+		if identifier == "exchange" {
+
+			json.Unmarshal(response_data, &exchange)
+		}
+
+		if identifier == "ticker" {
+
+			json.Unmarshal(response_data, &ticker)
+		}
+
+		if identifier == "klines" {
+
+			json.Unmarshal(response_data, &klines)
+		}
+
+		return true
 	}
 
 	if identifier == "new_order" {
@@ -270,27 +284,45 @@ func run_http(endpoint string, identifier string) bool {
 		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
+
 			fmt.Println(err)
+
+			return false
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
 
-		response, err = client.Do(req)
+		response, err := client.Do(req)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+			return false
+		}
+
+		response_data, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+			return false
+		}
+
+		json.Unmarshal(response_data, &new_order)
+
+		if new_order.Symbol == "" {
+
+			return false
+		}
+
+		fmt.Println("New order for " + new_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
+
+		return true
 	}
 
 	if identifier == "close_order" {
-
-		var side string
-
-		if long {
-
-			side = "SELL"
-		}
-
-		if short {
-
-			side = "BUY"
-		}
 
 		query_string := "symbol=" + symbol + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
@@ -307,12 +339,35 @@ func run_http(endpoint string, identifier string) bool {
 		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
+
 			fmt.Println(err)
+
+			return false
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
 
-		response, err = client.Do(req)
+		response, err := client.Do(req)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+			return false
+		}
+
+		response_data, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+			return false
+		}
+
+		fmt.Println(string(response_data))
+
+		return true
 	}
 
 	if identifier == "cancel_order" {
@@ -332,19 +387,37 @@ func run_http(endpoint string, identifier string) bool {
 		req, err := http.NewRequest("DELETE", base_url+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
+
 			fmt.Println(err)
+
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
 
-		response, err = client.Do(req)
+		response, err := client.Do(req)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+		}
+
+		response_data, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+		}
+
+		fmt.Println(string(response_data))
 	}
 
 	if identifier == "stop_order" {
 
-		var query_string string
-
 		var decimal_format string
+
+		var query_string string
 
 		if long {
 
@@ -366,8 +439,6 @@ func run_http(endpoint string, identifier string) bool {
 
 		}
 
-		// fmt.Println(query_string)
-
 		mac := hmac.New(sha256.New, []byte(api_secret))
 
 		mac.Write([]byte(query_string))
@@ -379,12 +450,44 @@ func run_http(endpoint string, identifier string) bool {
 		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
+
 			fmt.Println(err)
+
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
 
-		response, err = client.Do(req)
+		response, err := client.Do(req)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+		}
+
+		response_data, err := ioutil.ReadAll(response.Body)
+
+		if err != nil {
+
+			fmt.Println(err)
+
+		}
+
+		json.Unmarshal(response_data, &stop_order)
+
+		if stop_order.Symbol == "" {
+
+			fmt.Println(symbol + " " + string(response_data))
+
+			fmt.Println(ticker_price)
+
+			fmt.Println(stopPrice)
+
+		}
+
+		fmt.Println("Short order for " + stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
+
+		fmt.Println(stop_order.StopPrice)
 	}
 
 	if identifier == "account" {
@@ -402,86 +505,35 @@ func run_http(endpoint string, identifier string) bool {
 		req, err := http.NewRequest("GET", base_url+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
+
 			fmt.Println(err)
+
+			return false
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
 
-		response, err = client.Do(req)
-	}
+		response, err := client.Do(req)
 
-	if err != nil {
+		if err != nil {
 
-		fmt.Println(err.Error())
-
-		return true
-	}
-
-	responseData, err := ioutil.ReadAll(response.Body)
-
-	if err != nil {
-		log.Fatal(err)
-	}
-
-	if identifier == "exchange" {
-		json.Unmarshal(responseData, &exchange)
-	}
-
-	if identifier == "ticker" {
-		json.Unmarshal(responseData, &ticker)
-	}
-
-	if identifier == "klines" {
-		json.Unmarshal(responseData, &klines)
-	}
-
-	if identifier == "new_order" {
-
-		json.Unmarshal(responseData, &new_order)
-
-		if new_order.Symbol == "" {
+			fmt.Println(err)
 
 			return false
 		}
 
-		fmt.Println("New order for " + new_order.Symbol + "  " + time.Now().Format("2006.01.02 15"))
+		response_data, err := ioutil.ReadAll(response.Body)
 
-		return true
-	}
+		if err != nil {
 
-	if identifier == "stop_order" {
-
-		json.Unmarshal(responseData, &stop_order)
-
-		if stop_order.Symbol == "" {
-
-			fmt.Println(symbol + " " + string(responseData))
-
-			fmt.Println(ticker_price)
-
-			fmt.Println(stopPrice)
+			fmt.Println(err)
 
 			return false
 		}
 
-		fmt.Println("Short order for " + stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
-
-		fmt.Println(stop_order.StopPrice)
-	}
-
-	if identifier == "account" {
-		json.Unmarshal(responseData, &account)
-	}
-
-	if identifier == "close_order" {
-
-		fmt.Println(string(responseData))
+		json.Unmarshal(response_data, &account)
 
 		return true
-	}
-	if identifier == "cancel_order" {
-
-		fmt.Println(string(responseData))
 	}
 
 	return false
@@ -693,13 +745,13 @@ func consider_closing_this_position(symbol string, update_time int64, amount str
 
 		if string(amount[0]) == "-" {
 
-			short = true
+			side = "BUY"
 
 			quantity = amount[1:]
 
 		} else {
 
-			long = true
+			side = "SELL"
 
 			quantity = amount
 		}
@@ -730,13 +782,13 @@ func close_this_position_if_next_hour(symbol string, update_time int64, amount s
 
 		if string(amount[0]) == "-" {
 
-			short = true
+			side = "BUY"
 
 			quantity = amount[1:]
 
 		} else {
 
-			long = true
+			side = "SELL"
 
 			quantity = amount
 		}
