@@ -34,7 +34,7 @@ var usd_per_trade = 50.00
 
 var close_position_hours_passed = int64(60 * 60 * 24)
 
-var limit = "72"
+var limit = "24"
 
 type Symbols struct {
 	Symbol            string
@@ -597,10 +597,14 @@ func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bo
 
 		other_candles_length := math.Abs(high - low)
 
+		// Check that current candle length is the longest //
+
 		if current_candle_length < other_candles_length {
 
 			return false
 		}
+
+		// Check that ticker is highest //
 
 		if ticker_price > current_candle_open {
 
@@ -611,6 +615,8 @@ func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bo
 
 			short = true
 		}
+
+		// Check that ticker is lowest //
 
 		if ticker_price < current_candle_open {
 
@@ -713,6 +719,12 @@ func close_this_position_if_next_hour(symbol string, update_time int64, amount s
 	position_open_time := (time.Unix(update_time, 0)).String()
 
 	time_now := time.Now().Format("2006.01.02 15")
+
+	// position_open_hour, _ := strconv.Atoi(position_open_time[11:13])
+
+	// time_now_hour, _ := strconv.Atoi(time_now[11:13])
+
+	// if time_now_hour-position_open_hour >= 3 {
 
 	if position_open_time[11:13] != time_now[11:13] {
 
