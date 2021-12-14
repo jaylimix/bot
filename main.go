@@ -115,11 +115,11 @@ func main() {
 
 func handleRequest() {
 
-	if !run_http("/fapi/v1/exchangeInfo", "exchange") {
+	if !run_http_and_return_false_if_error("/fapi/v1/exchangeInfo", "exchange") {
 		os.Exit(1)
 	}
 
-	if !run_http("/fapi/v2/account", "account") {
+	if !run_http_and_return_false_if_error("/fapi/v2/account", "account") {
 		os.Exit(1)
 	}
 
@@ -167,7 +167,7 @@ func handleRequest() {
 			continue
 		}
 
-		if run_http("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
+		if !run_http_and_return_false_if_error("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
 			continue
 		}
 
@@ -181,7 +181,7 @@ func handleRequest() {
 			continue
 		}
 
-		if run_http("/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
+		if !run_http_and_return_false_if_error("/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
 			continue
 		}
 
@@ -191,11 +191,11 @@ func handleRequest() {
 
 		quantity_precision = strconv.Itoa(v.QuantityPrecision)
 
-		if run_http("/fapi/v1/order", "new_order") {
+		if run_http_and_return_false_if_error("/fapi/v1/order", "new_order") {
 
 			price_precision = strconv.Itoa(v.PricePrecision)
 
-			run_http("/fapi/v1/order", "stop_order")
+			run_http_and_return_false_if_error("/fapi/v1/order", "stop_order")
 		}
 
 	}
@@ -217,7 +217,7 @@ func set_minimum_quantity_per_order(quantity_precision int) {
 	}
 }
 
-func run_http(endpoint string, identifier string) bool {
+func run_http_and_return_false_if_error(endpoint string, identifier string) bool {
 
 	if identifier == "exchange" || identifier == "ticker" || identifier == "klines" {
 
@@ -266,10 +266,12 @@ func run_http(endpoint string, identifier string) bool {
 		quantity = fmt.Sprintf(decimal_format, quantity_after_per_trade_divide_by_price)
 
 		if long {
+
 			query_string = "symbol=" + symbol + "&side=BUY&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
 		if short {
+
 			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
@@ -325,8 +327,6 @@ func run_http(endpoint string, identifier string) bool {
 	if identifier == "close_order" {
 
 		query_string := "symbol=" + symbol + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
-
-		fmt.Print(query_string)
 
 		mac := hmac.New(sha256.New, []byte(api_secret))
 
@@ -389,7 +389,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
@@ -399,7 +398,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		response_data, err := ioutil.ReadAll(response.Body)
@@ -407,7 +405,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		fmt.Println(string(response_data))
@@ -452,7 +449,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		req.Header.Set("X-MBX-APIKEY", api_key)
@@ -462,7 +458,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		response_data, err := ioutil.ReadAll(response.Body)
@@ -470,7 +465,6 @@ func run_http(endpoint string, identifier string) bool {
 		if err != nil {
 
 			fmt.Println(err)
-
 		}
 
 		json.Unmarshal(response_data, &stop_order)
@@ -482,7 +476,6 @@ func run_http(endpoint string, identifier string) bool {
 			fmt.Println(ticker_price)
 
 			fmt.Println(stopPrice)
-
 		}
 
 		fmt.Println("Short order for " + stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
@@ -756,9 +749,9 @@ func consider_closing_this_position(symbol string, update_time int64, amount str
 			quantity = amount
 		}
 
-		if run_http("/fapi/v1/order", "close_order") {
+		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
 
-			run_http("/fapi/v1/allOpenOrders", "cancel_order")
+			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
 		}
 
 	}
@@ -793,9 +786,9 @@ func close_this_position_if_next_hour(symbol string, update_time int64, amount s
 			quantity = amount
 		}
 
-		if run_http("/fapi/v1/order", "close_order") {
+		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
 
-			run_http("/fapi/v1/allOpenOrders", "cancel_order")
+			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
 		}
 	}
 }
