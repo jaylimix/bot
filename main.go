@@ -32,9 +32,11 @@ var stop_loss_percentage = 0.10
 
 var usd_per_trade = 50.00
 
-var close_position_hours_passed = int64(60 * 60 * 24)
+var close_position_hours_passed = int64(60 * 60)
 
 var limit = "24"
+
+const TURN_OFF_OPENING_NEW_POSITIONS = false
 
 type Symbols struct {
 	Symbol            string
@@ -107,8 +109,6 @@ var the_longest_candle float64
 
 var current_candle_length float64
 
-var turn_off_opening_new_positions = false
-
 func main() {
 	lambda.Start(handleRequest)
 }
@@ -163,7 +163,7 @@ func handleRequest() {
 			continue
 		}
 
-		if turn_off_opening_new_positions {
+		if TURN_OFF_OPENING_NEW_POSITIONS {
 			continue
 		}
 
@@ -678,6 +678,86 @@ func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bo
 	return true
 }
 
+func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bool {
+
+	var current_candle_high float64
+
+	var current_candle_low float64
+
+	var current_candle_open float64
+
+	current_candle := true
+
+	for i := len(klines) - 1; i >= 0; i-- {
+
+		high, _ := strconv.ParseFloat(klines[i][2], 32)
+
+		low, _ := strconv.ParseFloat(klines[i][3], 32)
+
+		if current_candle {
+
+			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
+
+			if ticker_price > current_candle_open {
+
+				current_candle_length = math.Abs(ticker_price - low)
+
+				current_candle_high = high
+
+			}
+
+			if ticker_price < current_candle_open {
+
+				current_candle_length = math.Abs(ticker_price - high)
+
+				current_candle_low = low
+
+			}
+
+			current_candle = false
+
+			continue
+		}
+
+		other_candles_length := math.Abs(high - low)
+
+		// Check that current candle length is the longest //
+
+		if current_candle_length < other_candles_length {
+
+			return false
+		}
+
+		// Check that ticker price is halfway between high and low //
+
+		halfway_price := (current_candle_high + current_candle_low) / 2
+
+		// Green candle //
+
+		if ticker_price > current_candle_open {
+
+			if ticker_price <= halfway_price {
+
+				short = true
+			}
+
+		}
+
+		// Red candle //
+
+		if ticker_price < current_candle_open {
+
+			if ticker_price >= halfway_price {
+
+				long = true
+			}
+		}
+
+	}
+
+	return true
+}
+
 func slope_pattern_found_and_set_long_or_short() bool {
 
 	open_of_first_candle, _ := strconv.ParseFloat(klines[0][1], 32)
@@ -717,9 +797,9 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 		if position_amount != 0.0 && symbol == position.Symbol {
 
-			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
+			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-			close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
+			// close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
 
 			return true
 		}
