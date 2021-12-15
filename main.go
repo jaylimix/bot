@@ -16,15 +16,15 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-// var api_key = "14b417a306cd837d3c3ec9cee6f6c4ca2468b0b06a6028c3978ba8a6287ac5c2"
+// var api_key = "294254234f002b644ad82c7e1fbc444b28a022518e7b624c9eb66a4d986f94c4"
+
+// var api_secret = "9b1cfa1c87be05be52e26dfc1ea6bbdaa3a255971c248bca19e435931b12178b"
+
+// var base_url = "https://testnet.binancefuture.com"
 
 var api_key = "Iv49dUKHcJ8rqypuu4SW9Xa0nLYgv75b2QtdvQtcIeP7EnhTkmRanZxtA8yQMMi7"
 
-// var api_secret = "a6d2fabd26dbe982d0b104e41e115352dc24dfda6726725f153c05aaa6440ca3"
-
 var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF0L"
-
-// var base_url = "https://testnet.binancefuture.com"
 
 var base_url = "https://fapi.binance.com"
 
@@ -35,6 +35,8 @@ var usd_per_trade = 50.00
 var close_position_hours_passed = int64(60 * 60)
 
 var limit = "24"
+
+var maximum_positions = 5
 
 const TURN_OFF_OPENING_NEW_POSITIONS = false
 
@@ -160,6 +162,10 @@ func handleRequest() {
 		// }
 
 		if check_symbol_already_has_open_position_and_consider_closing_position(symbol) {
+			continue
+		}
+
+		if get_total_positions() >= maximum_positions {
 			continue
 		}
 
@@ -797,15 +803,32 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 		if position_amount != 0.0 && symbol == position.Symbol {
 
-			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
+			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-			// close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
+			close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
 
 			return true
 		}
 	}
 
 	return false
+}
+
+func get_total_positions() int {
+
+	var number_of_positions int
+
+	for _, position := range account.Positions {
+
+		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
+
+		if position_amount != 0.0 {
+
+			number_of_positions++
+		}
+	}
+
+	return number_of_positions
 }
 
 func consider_closing_this_position(symbol string, update_time int64, amount string) {
