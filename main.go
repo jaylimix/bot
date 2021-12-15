@@ -16,27 +16,27 @@ import (
 	"github.com/aws/aws-lambda-go/lambda"
 )
 
-// var api_key = "294254234f002b644ad82c7e1fbc444b28a022518e7b624c9eb66a4d986f94c4"
+// const API_KEY = "294254234f002b644ad82c7e1fbc444b28a022518e7b624c9eb66a4d986f94c4"
 
-// var api_secret = "9b1cfa1c87be05be52e26dfc1ea6bbdaa3a255971c248bca19e435931b12178b"
+// const API_SECRET = "9b1cfa1c87be05be52e26dfc1ea6bbdaa3a255971c248bca19e435931b12178b"
 
-// var base_url = "https://testnet.binancefuture.com"
+// const BASE_URL = "https://testnet.binancefuture.com"
 
-var api_key = "Iv49dUKHcJ8rqypuu4SW9Xa0nLYgv75b2QtdvQtcIeP7EnhTkmRanZxtA8yQMMi7"
+const API_KEY = "Iv49dUKHcJ8rqypuu4SW9Xa0nLYgv75b2QtdvQtcIeP7EnhTkmRanZxtA8yQMMi7"
 
-var api_secret = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF0L"
+const API_SECRET = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4mGF0L"
 
-var base_url = "https://fapi.binance.com"
+const BASE_URL = "https://fapi.binance.com"
 
-var stop_loss_percentage = 0.10
+const STOP_LOSS_PERCENTAGE = 0.10
 
-var usd_per_trade = 50.00
+const USD_PER_TRADE = 50.00
 
-var close_position_hours_passed = int64(60 * 60)
+const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 1)
 
-var limit = "24"
+const LIMIT = "24"
 
-var maximum_positions = 5
+const MAXIMUM_POSITIONS = 5
 
 const TURN_OFF_OPENING_NEW_POSITIONS = false
 
@@ -81,11 +81,11 @@ var exchange Exchange
 
 var ticker Ticker
 
-var ticker_price float64
-
 var long bool
 
 var short bool
+
+var stopPrice string
 
 var side string
 
@@ -95,9 +95,13 @@ var price_precision string
 
 var quantity_precision string
 
+var quantity string
+
+var ticker_price float64
+
 var quantity_after_per_trade_divide_by_price float64
 
-var quantity string
+var current_candle_length float64
 
 var minimum_quantity_per_order float64
 
@@ -105,17 +109,11 @@ var new_order NewOrder
 
 var stop_order StopOrder
 
-var stopPrice string
-
-var the_longest_candle float64
-
-var current_candle_length float64
-
 func main() {
-	lambda.Start(handleRequest)
+	lambda.Start(handle_request)
 }
 
-func handleRequest() {
+func handle_request() {
 
 	if !run_http_and_return_false_if_error("/fapi/v1/exchangeInfo", "exchange") {
 		os.Exit(1)
@@ -165,7 +163,7 @@ func handleRequest() {
 			continue
 		}
 
-		if get_total_positions() >= maximum_positions {
+		if get_total_positions() >= MAXIMUM_POSITIONS {
 			continue
 		}
 
@@ -179,7 +177,7 @@ func handleRequest() {
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		quantity_after_per_trade_divide_by_price = usd_per_trade / ticker_price
+		quantity_after_per_trade_divide_by_price = USD_PER_TRADE / ticker_price
 
 		set_minimum_quantity_per_order(v.QuantityPrecision)
 
@@ -187,7 +185,7 @@ func handleRequest() {
 			continue
 		}
 
-		if !run_http_and_return_false_if_error("/fapi/v1/klines?limit="+limit+"&interval=1h&symbol="+symbol, "klines") {
+		if !run_http_and_return_false_if_error("/fapi/v1/klines?LIMIT="+LIMIT+"&interval=1h&symbol="+symbol, "klines") {
 			continue
 		}
 
@@ -227,7 +225,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 	if identifier == "exchange" || identifier == "ticker" || identifier == "klines" {
 
-		response, err := http.Get(base_url + endpoint)
+		response, err := http.Get(BASE_URL + endpoint)
 
 		if err != nil {
 
@@ -281,7 +279,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			query_string = "symbol=" + symbol + "&side=SELL&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 		}
 
-		mac := hmac.New(sha256.New, []byte(api_secret))
+		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
 		mac.Write([]byte(query_string))
 
@@ -289,7 +287,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		client := &http.Client{}
 
-		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+		req, err := http.NewRequest("POST", BASE_URL+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
 
@@ -298,7 +296,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			return false
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		req.Header.Set("X-MBX-APIKEY", API_KEY)
 
 		response, err := client.Do(req)
 
@@ -334,7 +332,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		query_string := "symbol=" + symbol + "&side=" + side + "&type=MARKET&quantity=" + quantity + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
-		mac := hmac.New(sha256.New, []byte(api_secret))
+		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
 		mac.Write([]byte(query_string))
 
@@ -342,7 +340,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		client := &http.Client{}
 
-		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+		req, err := http.NewRequest("POST", BASE_URL+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
 
@@ -351,7 +349,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			return false
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		req.Header.Set("X-MBX-APIKEY", API_KEY)
 
 		response, err := client.Do(req)
 
@@ -382,7 +380,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		fmt.Print(query_string)
 
-		mac := hmac.New(sha256.New, []byte(api_secret))
+		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
 		mac.Write([]byte(query_string))
 
@@ -390,14 +388,14 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		client := &http.Client{}
 
-		req, err := http.NewRequest("DELETE", base_url+endpoint+"?"+query_string+signature, nil)
+		req, err := http.NewRequest("DELETE", BASE_URL+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
 
 			fmt.Println(err)
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		req.Header.Set("X-MBX-APIKEY", API_KEY)
 
 		response, err := client.Do(req)
 
@@ -426,7 +424,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 			decimal_format = "%." + price_precision + "f"
 
-			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1-stop_loss_percentage))
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1-STOP_LOSS_PERCENTAGE))
 
 			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=SELL&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
@@ -436,13 +434,13 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 			decimal_format = "%." + price_precision + "f"
 
-			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1+stop_loss_percentage))
+			stopPrice = fmt.Sprintf(decimal_format, ticker_price*(1+STOP_LOSS_PERCENTAGE))
 
 			query_string = "symbol=" + symbol + "&stopPrice=" + stopPrice + "&closePosition=true&side=BUY&type=STOP_MARKET&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
 		}
 
-		mac := hmac.New(sha256.New, []byte(api_secret))
+		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
 		mac.Write([]byte(query_string))
 
@@ -450,14 +448,14 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		client := &http.Client{}
 
-		req, err := http.NewRequest("POST", base_url+endpoint+"?"+query_string+signature, nil)
+		req, err := http.NewRequest("POST", BASE_URL+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
 
 			fmt.Println(err)
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		req.Header.Set("X-MBX-APIKEY", API_KEY)
 
 		response, err := client.Do(req)
 
@@ -493,7 +491,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
-		mac := hmac.New(sha256.New, []byte(api_secret))
+		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
 		mac.Write([]byte(query_string))
 
@@ -501,7 +499,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		client := &http.Client{}
 
-		req, err := http.NewRequest("GET", base_url+endpoint+"?"+query_string+signature, nil)
+		req, err := http.NewRequest("GET", BASE_URL+endpoint+"?"+query_string+signature, nil)
 
 		if err != nil {
 
@@ -510,7 +508,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			return false
 		}
 
-		req.Header.Set("X-MBX-APIKEY", api_key)
+		req.Header.Set("X-MBX-APIKEY", API_KEY)
 
 		response, err := client.Do(req)
 
@@ -536,69 +534,6 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 	}
 
 	return false
-}
-
-func set_current_candles_length_and_longest_candles_length() {
-
-	var current_candle = true
-
-	for i := len(klines) - 1; i >= 0; i-- {
-
-		high, _ := strconv.ParseFloat(klines[i][2], 32)
-		low, _ := strconv.ParseFloat(klines[i][3], 32)
-
-		if current_candle {
-			the_longest_candle = math.Abs(high - low)
-			current_candle_length = the_longest_candle
-			current_candle = false
-		}
-
-		other_candles_length := math.Abs(high - low)
-
-		if other_candles_length > the_longest_candle {
-			the_longest_candle = other_candles_length
-		}
-	}
-}
-
-func current_candle_length_is_the_longest() bool {
-
-	current_candle := true
-
-	var current_candle_length float64
-
-	for i := len(klines) - 1; i >= 0; i-- {
-
-		high, _ := strconv.ParseFloat(klines[i][2], 32)
-		low, _ := strconv.ParseFloat(klines[i][3], 32)
-
-		if current_candle {
-
-			open, _ := strconv.ParseFloat(klines[i][1], 32)
-
-			if ticker_price > open {
-
-				current_candle_length = math.Abs(ticker_price - low)
-			}
-
-			if ticker_price < open {
-
-				current_candle_length = math.Abs(ticker_price - high)
-			}
-
-			current_candle = false
-
-			continue
-		}
-
-		other_candles_high_vs_low := math.Abs(high - low)
-
-		if current_candle_length < other_candles_high_vs_low {
-			return false
-		}
-	}
-
-	return true
 }
 
 func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bool {
@@ -684,6 +619,138 @@ func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bo
 	return true
 }
 
+func check_symbol_already_has_open_position_and_consider_closing_position(symbol string) bool {
+
+	for _, position := range account.Positions {
+
+		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
+
+		if position_amount != 0.0 && symbol == position.Symbol {
+
+			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
+
+			close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
+
+			return true
+		}
+	}
+
+	return false
+}
+
+func get_total_positions() int {
+
+	var number_of_positions int
+
+	for _, position := range account.Positions {
+
+		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
+
+		if position_amount != 0.0 {
+
+			number_of_positions++
+		}
+	}
+
+	return number_of_positions
+}
+
+func close_this_position_if_next_hour(symbol string, update_time int64, amount string) {
+
+	update_time = update_time / 1000
+
+	position_open_time := (time.Unix(update_time, 0)).String()
+
+	time_now := time.Now().Format("2006.01.02 15")
+
+	// position_open_hour, _ := strconv.Atoi(position_open_time[11:13])
+
+	// time_now_hour, _ := strconv.Atoi(time_now[11:13])
+
+	// if time_now_hour-position_open_hour >= 3 {
+
+	if position_open_time[11:13] != time_now[11:13] {
+
+		if string(amount[0]) == "-" {
+
+			side = "BUY"
+
+			quantity = amount[1:]
+
+		} else {
+
+			side = "SELL"
+
+			quantity = amount
+		}
+
+		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
+
+			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
+		}
+	}
+}
+
+func consider_closing_this_position(symbol string, update_time int64, amount string) {
+
+	update_time = update_time / 1000
+
+	time_diff := time.Now().Unix() - int64(update_time)
+
+	if time_diff >= CLOSE_POSITION_HOURS_PASSED {
+
+		if string(amount[0]) == "-" {
+
+			side = "BUY"
+
+			quantity = amount[1:]
+
+		} else {
+
+			side = "SELL"
+
+			quantity = amount
+		}
+
+		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
+
+			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
+		}
+
+	}
+}
+
+func slope_pattern_found_and_set_long_or_short() bool {
+
+	open_of_first_candle, _ := strconv.ParseFloat(klines[0][1], 32)
+
+	open_of_current_candle, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
+
+	// If green candle and line sloping up we go short
+	if ticker_price > open_of_current_candle {
+
+		if open_of_first_candle < open_of_current_candle {
+
+			short = true
+
+			return true
+		}
+	}
+
+	// If red candle and line slopping down we go long
+	if ticker_price < open_of_current_candle {
+
+		if open_of_first_candle > open_of_current_candle {
+
+			long = true
+
+			return true
+		}
+	}
+
+	return false
+}
+
 func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bool {
 
 	var current_candle_high float64
@@ -762,136 +829,4 @@ func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bo
 	}
 
 	return true
-}
-
-func slope_pattern_found_and_set_long_or_short() bool {
-
-	open_of_first_candle, _ := strconv.ParseFloat(klines[0][1], 32)
-
-	open_of_current_candle, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
-
-	// If green candle and line sloping up we go short
-	if ticker_price > open_of_current_candle {
-
-		if open_of_first_candle < open_of_current_candle {
-
-			short = true
-
-			return true
-		}
-	}
-
-	// If red candle and line slopping down we go long
-	if ticker_price < open_of_current_candle {
-
-		if open_of_first_candle > open_of_current_candle {
-
-			long = true
-
-			return true
-		}
-	}
-
-	return false
-}
-
-func check_symbol_already_has_open_position_and_consider_closing_position(symbol string) bool {
-
-	for _, position := range account.Positions {
-
-		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
-
-		if position_amount != 0.0 && symbol == position.Symbol {
-
-			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
-
-			close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
-
-			return true
-		}
-	}
-
-	return false
-}
-
-func get_total_positions() int {
-
-	var number_of_positions int
-
-	for _, position := range account.Positions {
-
-		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
-
-		if position_amount != 0.0 {
-
-			number_of_positions++
-		}
-	}
-
-	return number_of_positions
-}
-
-func consider_closing_this_position(symbol string, update_time int64, amount string) {
-
-	update_time = update_time / 1000
-
-	time_diff := time.Now().Unix() - int64(update_time)
-
-	if time_diff >= close_position_hours_passed {
-
-		if string(amount[0]) == "-" {
-
-			side = "BUY"
-
-			quantity = amount[1:]
-
-		} else {
-
-			side = "SELL"
-
-			quantity = amount
-		}
-
-		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
-
-			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
-		}
-
-	}
-}
-
-func close_this_position_if_next_hour(symbol string, update_time int64, amount string) {
-
-	update_time = update_time / 1000
-
-	position_open_time := (time.Unix(update_time, 0)).String()
-
-	time_now := time.Now().Format("2006.01.02 15")
-
-	// position_open_hour, _ := strconv.Atoi(position_open_time[11:13])
-
-	// time_now_hour, _ := strconv.Atoi(time_now[11:13])
-
-	// if time_now_hour-position_open_hour >= 3 {
-
-	if position_open_time[11:13] != time_now[11:13] {
-
-		if string(amount[0]) == "-" {
-
-			side = "BUY"
-
-			quantity = amount[1:]
-
-		} else {
-
-			side = "SELL"
-
-			quantity = amount
-		}
-
-		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
-
-			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
-		}
-	}
 }
