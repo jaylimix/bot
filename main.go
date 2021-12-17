@@ -32,11 +32,11 @@ const STOP_LOSS_PERCENTAGE = 0.10
 
 const USD_PER_TRADE = 50.00
 
-const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 1)
+const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 5)
 
 const LIMIT = "24"
 
-const MAXIMUM_POSITIONS = 5
+const CHANGE_CONDITION_NUMBER = 10
 
 const TURN_OFF_OPENING_NEW_POSITIONS = false
 
@@ -163,9 +163,9 @@ func handle_request() {
 			continue
 		}
 
-		if get_total_positions() >= MAXIMUM_POSITIONS {
-			continue
-		}
+		// if total_number_of_positions() >= CHANGE_CONDITION_NUMBER {
+		// 	continue
+		// }
 
 		if TURN_OFF_OPENING_NEW_POSITIONS {
 			continue
@@ -189,8 +189,18 @@ func handle_request() {
 			continue
 		}
 
-		if !current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() {
-			continue
+		if total_number_of_positions() < CHANGE_CONDITION_NUMBER {
+
+			if !beat_other_candles_highest_or_lowest_and_is_longest_and_set_long_or_short() {
+				continue
+			}
+		}
+
+		if total_number_of_positions() >= CHANGE_CONDITION_NUMBER {
+
+			if !ticker_is_halfway_and_is_longest_and_set_long_or_short() {
+				continue
+			}
 		}
 
 		quantity_precision = strconv.Itoa(v.QuantityPrecision)
@@ -536,7 +546,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 	return false
 }
 
-func current_candle_is_the_longest_and_highest_lowest_and_set_long_or_short() bool {
+func beat_other_candles_highest_or_lowest_and_is_longest_and_set_long_or_short() bool {
 
 	var current_candle_high float64
 
@@ -625,11 +635,11 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
 
-		if position_amount != 0.0 && symbol == position.Symbol {
+		if symbol == position.Symbol && position_amount != 0.0 {
 
-			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
+			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-			close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
+			// close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
 
 			return true
 		}
@@ -638,7 +648,7 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 	return false
 }
 
-func get_total_positions() int {
+func total_number_of_positions() int {
 
 	var number_of_positions int
 
@@ -751,7 +761,7 @@ func slope_pattern_found_and_set_long_or_short() bool {
 	return false
 }
 
-func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bool {
+func ticker_is_halfway_and_is_longest_and_set_long_or_short() bool {
 
 	var current_candle_high float64
 
@@ -771,21 +781,7 @@ func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bo
 
 			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
 
-			if ticker_price > current_candle_open {
-
-				current_candle_length = math.Abs(ticker_price - low)
-
-				current_candle_high = high
-
-			}
-
-			if ticker_price < current_candle_open {
-
-				current_candle_length = math.Abs(ticker_price - high)
-
-				current_candle_low = low
-
-			}
+			current_candle_length = math.Abs(high - low)
 
 			current_candle = false
 
@@ -801,32 +797,35 @@ func current_candle_is_the_longest_and_ticker_halfway_and_set_long_or_short() bo
 			return false
 		}
 
-		// Check that ticker price is halfway between high and low //
+		current_candle_high = high
 
-		halfway_price := (current_candle_high + current_candle_low) / 2
-
-		// Green candle //
-
-		if ticker_price > current_candle_open {
-
-			if ticker_price <= halfway_price {
-
-				short = true
-			}
-
-		}
-
-		// Red candle //
-
-		if ticker_price < current_candle_open {
-
-			if ticker_price >= halfway_price {
-
-				long = true
-			}
-		}
-
+		current_candle_low = low
 	}
 
-	return true
+	// Check that ticker price is halfway between high and low //
+	halfway_price := (current_candle_high + current_candle_low) / 2
+
+	// Green candle //
+	if ticker_price > current_candle_open {
+
+		if ticker_price <= halfway_price {
+
+			short = true
+
+			return true
+		}
+	}
+
+	// Red candle //
+	if ticker_price < current_candle_open {
+
+		if ticker_price >= halfway_price {
+
+			long = true
+
+			return true
+		}
+	}
+
+	return false
 }
