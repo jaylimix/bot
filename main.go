@@ -189,14 +189,21 @@ func handle_request() {
 			continue
 		}
 
-		if total_number_of_positions() < CHANGE_CONDITION_NUMBER {
+		/*
+				if total_number_of_positions() < CHANGE_CONDITION_NUMBER {
 
-			if !beat_other_candles_highest_or_lowest_and_is_longest_and_set_long_or_short() {
+					if !beat_other_candles_highest_or_lowest_and_is_longest_and_set_long_or_short() {
+						continue
+					}
+				}
+
+
+			if !candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_short() {
 				continue
 			}
-		}
+		*/
 
-		if !candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_short() {
+		if !candle_is_long_and_ticker_is_one_third_and_is_highest_lowest_and_set_long_or_short() {
 			continue
 		}
 
@@ -953,6 +960,113 @@ func candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_
 			long = true
 
 			return true
+		}
+	}
+
+	return false
+}
+
+func candle_is_long_and_ticker_is_one_third_and_is_highest_lowest_and_set_long_or_short() bool {
+
+	var current_candle_high float64
+
+	var current_candle_low float64
+
+	var current_candle_open float64
+
+	current_candle := true
+
+	var count_beat_other_candles int
+
+	for i := len(klines) - 1; i >= 0; i-- {
+
+		high, _ := strconv.ParseFloat(klines[i][2], 32)
+
+		low, _ := strconv.ParseFloat(klines[i][3], 32)
+
+		if current_candle {
+
+			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
+
+			current_candle_high = high
+
+			current_candle_low = low
+
+			current_candle_length = math.Abs(current_candle_high - current_candle_low)
+
+			current_candle = false
+
+			continue
+		}
+
+		// Check that current candle length is the longest //
+
+		other_candles_length := math.Abs(high - low)
+
+		if current_candle_length > other_candles_length {
+
+			count_beat_other_candles++
+		}
+
+		// Set other candles high and low
+
+		other_candles_high := high
+
+		other_candles_low := low
+
+		// If green candle returns false if ticker is not the highest //
+
+		if ticker_price > current_candle_open {
+
+			if other_candles_high > current_candle_high {
+
+				return false
+			}
+		}
+
+		// If red candle returns false if ticker is not the lowest //
+
+		if ticker_price < current_candle_open {
+
+			if other_candles_low < current_candle_low {
+
+				return false
+			}
+		}
+	}
+
+	// Current candle length beats all or is second place: 40 >= 39 or 39 >= 39 //
+
+	if count_beat_other_candles >= len(klines)-1 {
+
+		// Check that ticker price is one third between high and low //
+
+		// Green candle //
+
+		if ticker_price > current_candle_open {
+
+			one_third_price := current_candle_high - ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price <= one_third_price {
+
+				short = true
+
+				return true
+			}
+		}
+
+		// Red candle //
+
+		if ticker_price < current_candle_open {
+
+			one_third_price := current_candle_low + ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price >= one_third_price {
+
+				long = true
+
+				return true
+			}
 		}
 	}
 
