@@ -34,7 +34,7 @@ const USD_PER_TRADE = 50.00
 
 const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 5)
 
-const LIMIT = "24"
+const LIMIT = "40"
 
 const CHANGE_CONDITION_NUMBER = 10
 
@@ -781,31 +781,57 @@ func ticker_is_halfway_and_is_longest_and_set_long_or_short() bool {
 
 			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
 
-			current_candle_length = math.Abs(high - low)
+			current_candle_high = high
+
+			current_candle_low = low
+
+			current_candle_length = math.Abs(current_candle_high - current_candle_low)
 
 			current_candle = false
 
 			continue
 		}
 
-		other_candles_length := math.Abs(high - low)
-
 		// Check that current candle length is the longest //
+
+		other_candles_length := math.Abs(high - low)
 
 		if current_candle_length < other_candles_length {
 
 			return false
 		}
 
-		current_candle_high = high
+		other_candles_high := high
 
-		current_candle_low = low
+		other_candles_low := low
+
+		// If green candle check that ticker is highest //
+
+		if ticker_price > current_candle_open {
+
+			if other_candles_high > current_candle_high {
+
+				return false
+			}
+		}
+
+		// If red candle check that ticker is lowest //
+
+		if ticker_price < current_candle_open {
+
+			if other_candles_low < current_candle_low {
+
+				return false
+			}
+		}
 	}
 
 	// Check that ticker price is halfway between high and low //
+
 	halfway_price := (current_candle_high + current_candle_low) / 2
 
 	// Green candle //
+
 	if ticker_price > current_candle_open {
 
 		if ticker_price <= halfway_price {
@@ -817,6 +843,114 @@ func ticker_is_halfway_and_is_longest_and_set_long_or_short() bool {
 	}
 
 	// Red candle //
+
+	if ticker_price < current_candle_open {
+
+		if ticker_price >= halfway_price {
+
+			long = true
+
+			return true
+		}
+	}
+
+	return false
+}
+
+func candle_is_long_and_ticker_is_halfway_and_set_long_or_short() bool {
+
+	var current_candle_high float64
+
+	var current_candle_low float64
+
+	var current_candle_open float64
+
+	current_candle := true
+
+	var count_beat_other_candles int
+
+	for i := len(klines) - 1; i >= 0; i-- {
+
+		high, _ := strconv.ParseFloat(klines[i][2], 32)
+
+		low, _ := strconv.ParseFloat(klines[i][3], 32)
+
+		if current_candle {
+
+			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
+
+			current_candle_high = high
+
+			current_candle_low = low
+
+			current_candle_length = math.Abs(current_candle_high - current_candle_low)
+
+			current_candle = false
+
+			continue
+		}
+
+		// Check that current candle length is the longest //
+
+		other_candles_length := math.Abs(high - low)
+
+		if current_candle_length > other_candles_length {
+
+			count_beat_other_candles++
+		}
+
+		// Set other candles high and low
+
+		other_candles_high := high
+
+		other_candles_low := low
+
+		// If green candle returns false if ticker is not the highest //
+
+		if ticker_price > current_candle_open {
+
+			if other_candles_high > current_candle_high {
+
+				return false
+			}
+		}
+
+		// If red candle returns false if ticker is not the lowest //
+
+		if ticker_price < current_candle_open {
+
+			if other_candles_low < current_candle_low {
+
+				return false
+			}
+		}
+	}
+
+	// Return false if current cannot beat most other candles, for example 34 < 35 //
+
+	if count_beat_other_candles < len(klines)-5 {
+
+		return false
+	}
+
+	// Check that ticker price is halfway between high and low //
+
+	halfway_price := (current_candle_high + current_candle_low) / 2
+
+	// Green candle //
+
+	if ticker_price > current_candle_open {
+
+		if ticker_price <= halfway_price {
+
+			short = true
+
+			return true
+		}
+	}
+
+	// Red candle //
+
 	if ticker_price < current_candle_open {
 
 		if ticker_price >= halfway_price {
