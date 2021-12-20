@@ -196,11 +196,8 @@ func handle_request() {
 			}
 		}
 
-		if total_number_of_positions() >= CHANGE_CONDITION_NUMBER {
-
-			if !ticker_is_halfway_and_is_longest_and_set_long_or_short() {
-				continue
-			}
+		if !candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_short() {
+			continue
 		}
 
 		quantity_precision = strconv.Itoa(v.QuantityPrecision)
@@ -492,9 +489,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			fmt.Println(stopPrice)
 		}
 
-		fmt.Println("Short order for " + stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
-
-		fmt.Println(stop_order.StopPrice)
+		fmt.Println("Short order " + stop_order.StopPrice + " for " + stop_order.Symbol + " " + time.Now().Format("2006.01.02 15"))
 	}
 
 	if identifier == "account" {
@@ -857,7 +852,7 @@ func ticker_is_halfway_and_is_longest_and_set_long_or_short() bool {
 	return false
 }
 
-func candle_is_long_and_ticker_is_halfway_and_set_long_or_short() bool {
+func candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_short() bool {
 
 	var current_candle_high float64
 
