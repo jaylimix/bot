@@ -28,11 +28,11 @@ const API_SECRET = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4m
 
 const BASE_URL = "https://fapi.binance.com"
 
-const STOP_LOSS_PERCENTAGE = 0.10
+const STOP_LOSS_PERCENTAGE = 0.03
 
 const USD_PER_TRADE = 50.00
 
-const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 5)
+const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 12)
 
 const LIMIT = "40"
 
@@ -155,17 +155,13 @@ func handle_request() {
 			continue
 		}
 
-		// if symbol != "CELOUSDT" {
+		// if symbol != "EOSUSDT" {
 		// 	continue
 		// }
 
 		if check_symbol_already_has_open_position_and_consider_closing_position(symbol) {
 			continue
 		}
-
-		// if total_number_of_positions() >= CHANGE_CONDITION_NUMBER {
-		// 	continue
-		// }
 
 		if TURN_OFF_OPENING_NEW_POSITIONS {
 			continue
@@ -189,21 +185,13 @@ func handle_request() {
 			continue
 		}
 
-		/*
-				if total_number_of_positions() < CHANGE_CONDITION_NUMBER {
+		set_long_or_short_when_candle_is_long_and_ticker_is_one_third_and_is_highest_or_lowest()
 
-					if !beat_other_candles_highest_or_lowest_and_is_longest_and_set_long_or_short() {
-						continue
-					}
-				}
+		if !long && !short {
+			set_long_or_short_when_previous_similar_color_candles_found()
+		}
 
-
-			if !candle_is_long_and_ticker_is_halfway_and_is_highest_lowest_and_set_long_or_short() {
-				continue
-			}
-		*/
-
-		if !candle_is_long_and_ticker_is_one_third_and_is_highest_lowest_and_set_long_or_short() {
+		if !long && !short {
 			continue
 		}
 
@@ -1071,4 +1059,226 @@ func candle_is_long_and_ticker_is_one_third_and_is_highest_lowest_and_set_long_o
 	}
 
 	return false
+}
+
+func candle_is_long_and_ticker_is_one_third_and_set_long_or_short() bool {
+
+	var current_candle_high float64
+
+	var current_candle_low float64
+
+	var current_candle_open float64
+
+	current_candle := true
+
+	var count_beat_other_candles int
+
+	for i := len(klines) - 1; i >= 0; i-- {
+
+		high, _ := strconv.ParseFloat(klines[i][2], 32)
+
+		low, _ := strconv.ParseFloat(klines[i][3], 32)
+
+		if current_candle {
+
+			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
+
+			current_candle_high = high
+
+			current_candle_low = low
+
+			current_candle_length = math.Abs(current_candle_high - current_candle_low)
+
+			current_candle = false
+
+			continue
+		}
+
+		// Check that current candle length is the longest //
+
+		other_candles_length := math.Abs(high - low)
+
+		if current_candle_length > other_candles_length {
+
+			count_beat_other_candles++
+		}
+	}
+
+	// Current candle length beats all or is second place: 40 >= 39 or 39 >= 39 //
+
+	if count_beat_other_candles >= len(klines)-1 {
+
+		// Check that ticker price is one third between high and low //
+
+		// Green candle //
+
+		if ticker_price > current_candle_open {
+
+			one_third_price := current_candle_high - ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price <= one_third_price {
+
+				short = true
+
+				return true
+			}
+		}
+
+		// Red candle //
+
+		if ticker_price < current_candle_open {
+
+			one_third_price := current_candle_low + ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price >= one_third_price {
+
+				long = true
+
+				return true
+			}
+		}
+	}
+
+	return false
+}
+
+func set_long_or_short_when_previous_similar_color_candles_found() {
+
+	var count_green_color_candles int
+
+	var count_red_color_candles int
+
+	for i := len(klines) - 2; i >= len(klines)-8; i-- {
+
+		open, _ := strconv.ParseFloat(klines[i][1], 32)
+
+		close, _ := strconv.ParseFloat(klines[i][4], 32)
+
+		if close > open {
+			count_green_color_candles++
+		}
+
+		if close < open {
+			count_red_color_candles++
+		}
+	}
+
+	if count_green_color_candles == 7 {
+
+		short = true
+
+		return
+	}
+
+	if count_red_color_candles == 7 {
+
+		long = true
+
+		return
+	}
+}
+
+func set_long_or_short_when_candle_is_long_and_ticker_is_one_third_and_is_highest_or_lowest() {
+
+	var current_candle_high float64
+
+	var current_candle_low float64
+
+	var current_candle_open float64
+
+	current_candle := true
+
+	var count_beat_other_candles int
+
+	for i := len(klines) - 1; i >= 0; i-- {
+
+		high, _ := strconv.ParseFloat(klines[i][2], 32)
+
+		low, _ := strconv.ParseFloat(klines[i][3], 32)
+
+		if current_candle {
+
+			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
+
+			current_candle_high = high
+
+			current_candle_low = low
+
+			current_candle_length = math.Abs(current_candle_high - current_candle_low)
+
+			current_candle = false
+
+			continue
+		}
+
+		// Check that current candle length is the longest //
+
+		other_candles_length := math.Abs(high - low)
+
+		if current_candle_length > other_candles_length {
+
+			count_beat_other_candles++
+		}
+
+		// Set other candles high and low
+
+		other_candles_high := high
+
+		other_candles_low := low
+
+		// If green candle returns false if ticker is not the highest //
+
+		if ticker_price > current_candle_open {
+
+			if other_candles_high > current_candle_high {
+
+				return
+			}
+		}
+
+		// If red candle returns false if ticker is not the lowest //
+
+		if ticker_price < current_candle_open {
+
+			if other_candles_low < current_candle_low {
+
+				return
+			}
+		}
+	}
+
+	// Current candle length beats all or is second place: 40 >= 39 or 39 >= 39 //
+
+	if count_beat_other_candles >= len(klines)-1 {
+
+		// Check that ticker price is one third between high and low //
+
+		// Green candle //
+
+		if ticker_price > current_candle_open {
+
+			one_third_price := current_candle_high - ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price <= one_third_price {
+
+				short = true
+
+				return
+			}
+		}
+
+		// Red candle //
+
+		if ticker_price < current_candle_open {
+
+			one_third_price := current_candle_low + ((current_candle_high - current_candle_low) / 3)
+
+			if ticker_price >= one_third_price {
+
+				long = true
+
+				return
+			}
+		}
+	}
 }
