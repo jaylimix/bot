@@ -7,13 +7,10 @@ import (
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
-	"math"
 	"net/http"
 	"os"
 	"strconv"
 	"time"
-
-	"github.com/aws/aws-lambda-go/lambda"
 )
 
 // const API_KEY = "294254234f002b644ad82c7e1fbc444b28a022518e7b624c9eb66a4d986f94c4"
@@ -28,13 +25,13 @@ const API_SECRET = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4m
 
 const BASE_URL = "https://fapi.binance.com"
 
-const STOP_LOSS_PERCENTAGE = 0.02
+const STOP_LOSS_PERCENTAGE = 0.01
 
 const USD_PER_TRADE = 50.00
 
-const CLOSE_POSITION_HOURS_PASSED = int64(3600)
+const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 3)
 
-const LIMIT = "40"
+const ENTRY_PERCENTAGE = 0.01
 
 const CHANGE_CONDITION_NUMBER = 10
 
@@ -54,6 +51,7 @@ type Positions struct {
 	Symbol      string
 	PositionAmt string
 	UpdateTime  int64
+	EntryPrice  string
 }
 
 type Account struct {
@@ -108,19 +106,19 @@ var ticker_price float64
 
 var quantity_after_per_trade_divide_by_price float64
 
-var current_candle_length float64
-
 var minimum_quantity_per_order float64
 
 var new_order NewOrder
 
 var stop_order StopOrder
 
-func main() {
-	lambda.Start(handle_request)
-}
+var count_total_positions int
 
-func handle_request() {
+func main() {
+	// 	lambda.Start(handle_request)
+	// }
+
+	// func handle_request() {
 
 	if !run_http_and_return_false_if_error("/fapi/v1/exchangeInfo", "exchange") {
 		os.Exit(1)
@@ -160,15 +158,31 @@ func handle_request() {
 			continue
 		case "BTCUSDT":
 			continue
+		case "BTCSTUSDT":
+			continue
+		case "DODOUSDT":
+			continue
 		}
 
-		// if symbol != "GTCUSDT" {
+		// if symbol != "BTCBUSD" {
 		// 	continue
 		// }
+
+		if !run_http_and_return_false_if_error("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
+			continue
+		}
+
+		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
 		if check_symbol_already_has_open_position_and_consider_closing_position(symbol) {
 			continue
 		}
+
+		if count_total_positions == 10 {
+			continue
+		}
+
+		fmt.Println(count_total_positions)
 
 		if !run_http_and_return_false_if_error("/fapi/v1/allOrders", "all_orders") {
 			continue
@@ -178,15 +192,10 @@ func handle_request() {
 			continue
 		}
 
+		// if previous_order_is_the_same_minute() {
 		if previous_order_is_the_same_hour() {
 			continue
 		}
-
-		if !run_http_and_return_false_if_error("/fapi/v1/ticker/price?symbol="+symbol, "ticker") {
-			continue
-		}
-
-		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
 		quantity_after_per_trade_divide_by_price = USD_PER_TRADE / ticker_price
 
@@ -196,11 +205,15 @@ func handle_request() {
 			continue
 		}
 
-		if !run_http_and_return_false_if_error("/fapi/v1/klines?LIMIT="+LIMIT+"&interval=1h&symbol="+symbol, "klines") {
+		if !run_http_and_return_false_if_error("/fapi/v1/klines?limit=2&interval=1m&symbol="+symbol, "klines") {
 			continue
 		}
 
-		set_long_or_short_when_candle_is_long_and_ticker_is_one_third_and_is_highest_or_lowest()
+		entry_by_looking_at_last_candle()
+
+		if !long && !short {
+			entry_on_power_move()
+		}
 
 		if !long && !short {
 			continue
@@ -568,9 +581,11 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 		if symbol == position.Symbol && position_amount != 0.0 {
 
-			consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
+			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-			// close_this_position_if_next_hour(position.Symbol, position.UpdateTime, position.PositionAmt)
+			count_total_positions++
+
+			close_position_when_profit_is_x_percentage(position.PositionAmt, position.EntryPrice)
 
 			return true
 		}
@@ -581,138 +596,42 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 func previous_order_is_the_same_hour() bool {
 
-	// fmt.Println(all_orders[len(all_orders)-1].UpdateTime)
+	if len(all_orders) == 0 {
+		return false
+	}
 
 	update_time := all_orders[len(all_orders)-1].UpdateTime / 1000
 
-	// fmt.Println(update_time)
-
 	previous_order_time := (time.Unix(int64(update_time), 0)).String()
-
-	// fmt.Println(previous_order_time)
 
 	time_now := time.Now().Format("2006.01.02 15")
 
-	// fmt.Println(time_now)
-
-	previous_order_hour, _ := strconv.Atoi(previous_order_time[11:13])
-
-	// fmt.Println(previous_order_hour)
-
-	time_now_hour, _ := strconv.Atoi(time_now[11:13])
-
-	// fmt.Println(time_now_hour)
-
-	if previous_order_hour == time_now_hour {
+	if previous_order_time[:13] == time_now {
 		return true
 	}
 
 	return false
 }
 
-func set_long_or_short_when_candle_is_long_and_ticker_is_one_third_and_is_highest_or_lowest() {
+func previous_order_is_the_same_minute() bool {
 
-	var current_candle_high float64
-
-	var current_candle_low float64
-
-	var current_candle_open float64
-
-	current_candle := true
-
-	var count_beat_other_candles int
-
-	for i := len(klines) - 1; i >= 0; i-- {
-
-		high, _ := strconv.ParseFloat(klines[i][2], 32)
-
-		low, _ := strconv.ParseFloat(klines[i][3], 32)
-
-		if current_candle {
-
-			current_candle_open, _ = strconv.ParseFloat(klines[i][1], 32)
-
-			current_candle_high = high
-
-			current_candle_low = low
-
-			current_candle_length = math.Abs(current_candle_high - current_candle_low)
-
-			current_candle = false
-
-			continue
-		}
-
-		// Check that current candle length is the longest //
-
-		other_candles_length := math.Abs(high - low)
-
-		if current_candle_length > other_candles_length {
-
-			count_beat_other_candles++
-		}
-
-		// Set other candles high and low
-
-		other_candles_high := high
-
-		other_candles_low := low
-
-		// If green candle returns false if ticker is not the highest //
-
-		if ticker_price > current_candle_open {
-
-			if other_candles_high > current_candle_high {
-
-				return
-			}
-		}
-
-		// If red candle returns false if ticker is not the lowest //
-
-		if ticker_price < current_candle_open {
-
-			if other_candles_low < current_candle_low {
-
-				return
-			}
-		}
+	if len(all_orders) == 0 {
+		return false
 	}
 
-	// Current candle length beats all or is second place: 40 >= 39 or 39 >= 39 //
+	update_time := all_orders[len(all_orders)-1].UpdateTime / 1000
 
-	if count_beat_other_candles >= len(klines)-1 {
+	previous_order_minute := (time.Unix(int64(update_time), 0)).String()
 
-		// Check that ticker price is one third between high and low //
+	time_now := time.Now().Format("2006-01-02 15:04")
 
-		// Green candle //
+	// fmt.Println(symbol + " " + previous_order_minute[:16] + " " + time_now)
 
-		if ticker_price > current_candle_open {
-
-			one_third_price := current_candle_high - ((current_candle_high - current_candle_low) / 3)
-
-			if ticker_price <= one_third_price {
-
-				short = true
-
-				return
-			}
-		}
-
-		// Red candle //
-
-		if ticker_price < current_candle_open {
-
-			one_third_price := current_candle_low + ((current_candle_high - current_candle_low) / 3)
-
-			if ticker_price >= one_third_price {
-
-				long = true
-
-				return
-			}
-		}
+	if previous_order_minute[:16] == time_now {
+		return true
 	}
+
+	return false
 }
 
 func consider_closing_this_position(symbol string, update_time int64, amount string) {
@@ -740,23 +659,108 @@ func consider_closing_this_position(symbol string, update_time int64, amount str
 
 			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
 		}
-
 	}
 }
 
-func total_number_of_positions() int {
+func entry_on_power_move() {
 
-	var number_of_positions int
+	current_candle_open, _ := strconv.ParseFloat(klines[len(klines)-1][1], 32)
 
-	for _, position := range account.Positions {
+	current_candle_high, _ := strconv.ParseFloat(klines[len(klines)-1][2], 32)
 
-		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
+	current_candle_low, _ := strconv.ParseFloat(klines[len(klines)-1][3], 32)
 
-		if position_amount != 0.0 {
+	percentage_change := 0.00
 
-			number_of_positions++
+	if ticker_price > current_candle_open {
+
+		percentage_change = (ticker_price - current_candle_low) / current_candle_low
+
+		if percentage_change >= ENTRY_PERCENTAGE {
+
+			// long = true
+
+			short = true
+
+			return
 		}
 	}
 
-	return number_of_positions
+	if ticker_price < current_candle_open {
+
+		percentage_change = (current_candle_high - ticker_price) / ticker_price
+
+		if percentage_change >= ENTRY_PERCENTAGE {
+
+			// short = true
+
+			long = true
+
+			return
+		}
+	}
+}
+
+func entry_by_looking_at_last_candle() {
+
+	last_candle_open, _ := strconv.ParseFloat(klines[0][1], 32)
+
+	last_candle_high, _ := strconv.ParseFloat(klines[0][2], 32)
+
+	last_candle_low, _ := strconv.ParseFloat(klines[0][3], 32)
+
+	percentage_change := (last_candle_high - last_candle_low) / last_candle_low
+
+	if percentage_change >= ENTRY_PERCENTAGE {
+
+		if ticker_price > last_candle_open {
+
+			// long = true
+
+			short = true
+
+			return
+		}
+
+		if ticker_price < last_candle_open {
+
+			// short = true
+
+			long = true
+
+			return
+		}
+	}
+}
+
+func close_position_when_profit_is_x_percentage(amount string, string_entry_price string) {
+
+	entry_price, _ := strconv.ParseFloat(string_entry_price, 32)
+
+	percentage_difference := 0.00
+
+	if string(amount[0]) == "-" {
+
+		percentage_difference = (entry_price - ticker_price) / ticker_price
+
+		side = "BUY"
+
+		quantity = amount[1:]
+
+	} else {
+
+		percentage_difference = (ticker_price - entry_price) / entry_price
+
+		side = "SELL"
+
+		quantity = amount
+	}
+
+	if percentage_difference >= STOP_LOSS_PERCENTAGE {
+
+		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
+
+			run_http_and_return_false_if_error("/fapi/v1/allOpenOrders", "cancel_order")
+		}
+	}
 }
