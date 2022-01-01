@@ -11,6 +11,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/aws/aws-lambda-go/lambda"
 )
 
 // const API_KEY = "294254234f002b644ad82c7e1fbc444b28a022518e7b624c9eb66a4d986f94c4"
@@ -25,7 +27,9 @@ const API_SECRET = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4m
 
 const BASE_URL = "https://fapi.binance.com"
 
-const STOP_LOSS_PERCENTAGE = 0.01
+const STOP_LOSS_PERCENTAGE = 0.008
+
+const TAKE_PROFIT_PERCENTAGE = 0.009
 
 const USD_PER_TRADE = 50.00
 
@@ -112,13 +116,11 @@ var new_order NewOrder
 
 var stop_order StopOrder
 
-var count_total_positions int
-
 func main() {
-	// 	lambda.Start(handle_request)
-	// }
+	lambda.Start(handle_request)
+}
 
-	// func handle_request() {
+func handle_request() {
 
 	if !run_http_and_return_false_if_error("/fapi/v1/exchangeInfo", "exchange") {
 		os.Exit(1)
@@ -174,15 +176,9 @@ func main() {
 
 		ticker_price, _ = strconv.ParseFloat(ticker.Price, 32)
 
-		if check_symbol_already_has_open_position_and_consider_closing_position(symbol) {
+		if symbol_already_has_open_position_and_consider_closing_position_and_not_max_positions(symbol) {
 			continue
 		}
-
-		if count_total_positions == 10 {
-			continue
-		}
-
-		fmt.Println(count_total_positions)
 
 		if !run_http_and_return_false_if_error("/fapi/v1/allOrders", "all_orders") {
 			continue
@@ -573,7 +569,11 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 	return false
 }
 
-func check_symbol_already_has_open_position_and_consider_closing_position(symbol string) bool {
+func symbol_already_has_open_position_and_consider_closing_position_and_not_max_positions(symbol string) bool {
+
+	close_position := false
+
+	count_open_positions := 0
 
 	for _, position := range account.Positions {
 
@@ -583,15 +583,21 @@ func check_symbol_already_has_open_position_and_consider_closing_position(symbol
 
 			// consider_closing_this_position(position.Symbol, position.UpdateTime, position.PositionAmt)
 
-			count_total_positions++
-
 			close_position_when_profit_is_x_percentage(position.PositionAmt, position.EntryPrice)
 
-			return true
+			close_position = true
+		}
+
+		if position_amount != 0.0 {
+			count_open_positions++
 		}
 	}
 
-	return false
+	if count_open_positions == 10 {
+		return false
+	}
+
+	return close_position
 }
 
 func previous_order_is_the_same_hour() bool {
@@ -604,13 +610,11 @@ func previous_order_is_the_same_hour() bool {
 
 	previous_order_time := (time.Unix(int64(update_time), 0)).String()
 
-	time_now := time.Now().Format("2006.01.02 15")
+	time_now := time.Now().Format("2006-01-02 15")
 
-	if previous_order_time[:13] == time_now {
-		return true
-	}
+	// fmt.Println(symbol + " " + previous_order_time[:13] + " " + time_now)
 
-	return false
+	return previous_order_time[:13] == time_now
 }
 
 func previous_order_is_the_same_minute() bool {
@@ -625,13 +629,7 @@ func previous_order_is_the_same_minute() bool {
 
 	time_now := time.Now().Format("2006-01-02 15:04")
 
-	// fmt.Println(symbol + " " + previous_order_minute[:16] + " " + time_now)
-
-	if previous_order_minute[:16] == time_now {
-		return true
-	}
-
-	return false
+	return previous_order_minute[:16] == time_now
 }
 
 func consider_closing_this_position(symbol string, update_time int64, amount string) {
@@ -756,7 +754,7 @@ func close_position_when_profit_is_x_percentage(amount string, string_entry_pric
 		quantity = amount
 	}
 
-	if percentage_difference >= STOP_LOSS_PERCENTAGE {
+	if percentage_difference >= TAKE_PROFIT_PERCENTAGE {
 
 		if run_http_and_return_false_if_error("/fapi/v1/order", "close_order") {
 
