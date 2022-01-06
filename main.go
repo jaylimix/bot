@@ -33,7 +33,7 @@ const TAKE_PROFIT_PERCENTAGE = 0.01
 
 const USD_PER_TRADE = 50.00
 
-const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 3)
+const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 1)
 
 const ENTRY_PERCENTAGE = 0.01
 
@@ -196,9 +196,9 @@ func handle_request() {
 			continue
 		}
 
-		// if max_positions() {
-		// 	continue
-		// }
+		if max_positions() {
+			continue
+		}
 
 		// if !run_http_and_return_false_if_error("/fapi/v1/allOrders", "all_orders") {
 		// 	continue
@@ -655,6 +655,8 @@ func symbol_already_has_open_position_and_consider_closing_position(symbol strin
 		position_amount, _ := strconv.ParseFloat(position.PositionAmt, 32)
 
 		if symbol == position.Symbol && position_amount != 0.0 {
+
+			consider_closing_this_position(symbol, position.UpdateTime, position.PositionAmt)
 
 			close_position_when_profit_is_x_percentage(position.PositionAmt, position.EntryPrice)
 
