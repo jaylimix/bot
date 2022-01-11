@@ -27,11 +27,11 @@ const API_SECRET = "u5ASQxwwYC4b1TJqUvLGZsqwXSXdqdIsj7uKf8X8nkXZ13xAe8gPVzc1Bq4m
 
 const BASE_URL = "https://fapi.binance.com"
 
-const STOP_LOSS_PERCENTAGE = 0.1
+const STOP_LOSS_PERCENTAGE = 0.01
 
-const TAKE_PROFIT_PERCENTAGE = 0.01
+const TAKE_PROFIT_PERCENTAGE = 0.1
 
-const USD_PER_TRADE = 50.00
+const USD_PER_TRADE = 10.00
 
 const CLOSE_POSITION_HOURS_PASSED = int64(60 * 60 * 1)
 
@@ -196,9 +196,9 @@ func handle_request() {
 			continue
 		}
 
-		if max_positions() {
-			continue
-		}
+		// if max_positions() {
+		// 	continue
+		// }
 
 		// if !run_http_and_return_false_if_error("/fapi/v1/allOrders", "all_orders") {
 		// 	continue
