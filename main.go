@@ -63,12 +63,17 @@ type Account struct {
 }
 
 type NewOrder struct {
-	Symbol string
+	Symbol  string
+	OrigQty string
 }
 
 type StopOrder struct {
 	Symbol    string
 	StopPrice string
+}
+
+type TakeProfitOrder struct {
+	Symbol string
 }
 
 type Ticker struct {
@@ -120,6 +125,8 @@ var minimum_quantity_per_order float64
 var new_order NewOrder
 
 var stop_order StopOrder
+
+var take_profit_order TakeProfitOrder
 
 func main() {
 
@@ -196,20 +203,6 @@ func handle_request() {
 			continue
 		}
 
-		// if max_positions() {
-		// 	continue
-		// }
-
-		// if !run_http_and_return_false_if_error("/fapi/v1/allOrders", "all_orders") {
-		// 	continue
-		// }
-
-		// if previous_order_is_the_same_minute() {
-
-		// if previous_order_is_the_same_hour() {
-		// 	continue
-		// }
-
 		quantity_after_per_trade_divide_by_price = USD_PER_TRADE / ticker_price
 
 		set_minimum_quantity_per_order(v.QuantityPrecision)
@@ -218,11 +211,7 @@ func handle_request() {
 			continue
 		}
 
-		entry_on_power_move()
-
-		if !long && !short {
-			entry_by_looking_at_last_candle()
-		}
+		entry_by_looking_at_last_candle()
 
 		if !long && !short {
 			continue
@@ -234,10 +223,10 @@ func handle_request() {
 
 			quantity_precision = strconv.Itoa(v.QuantityPrecision)
 
-			if run_http_and_return_false_if_error("/fapi/v1/order", "take_profit_order") {
+			run_http_and_return_false_if_error("/fapi/v1/order", "new_order")
 
-				run_http_and_return_false_if_error("/fapi/v1/order", "new_order")
-			}
+			run_http_and_return_false_if_error("/fapi/v1/order", "take_profit_order")
+
 		}
 	}
 }
@@ -378,9 +367,11 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		var side string
 
-		quantity_decimal_format := "%." + quantity_precision + "f"
+		// quantity_decimal_format := "%." + quantity_precision + "f"
 
-		quantity = fmt.Sprintf(quantity_decimal_format, quantity_after_per_trade_divide_by_price)
+		// quantity = fmt.Sprintf(quantity_decimal_format, quantity_after_per_trade_divide_by_price)
+
+		// quantity = new_order.OrigQty
 
 		price_decimal_format := "%." + price_precision + "f"
 
@@ -398,7 +389,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			take_profit_price = fmt.Sprintf(price_decimal_format, ticker_price*(1-TAKE_PROFIT_PERCENTAGE))
 		}
 
-		query_string = "symbol=" + symbol + "&price=" + take_profit_price + "&quantity=" + quantity + "&timeInForce=GTC" + "&side=" + side + "&type=LIMIT" + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
+		query_string = "symbol=" + symbol + "&price=" + take_profit_price + "&quantity=" + new_order.OrigQty + "&timeInForce=GTC" + "&side=" + side + "&type=LIMIT" + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
 		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
@@ -435,6 +426,21 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 			fmt.Println(err)
 
 			return false
+		}
+
+		json.Unmarshal(response_data, &take_profit_order)
+
+		if take_profit_order.Symbol == "" {
+
+			fmt.Println(price_precision)
+
+			int_price_precision, _ := strconv.Atoi(price_precision)
+
+			price_precision = strconv.Itoa(int_price_precision - 1)
+
+			fmt.Println(price_precision)
+
+			run_http_and_return_false_if_error("/fapi/v1/order", "take_profit_order")
 		}
 
 		fmt.Println(string(response_data))
@@ -492,7 +498,7 @@ func run_http_and_return_false_if_error(endpoint string, identifier string) bool
 
 		query_string := "symbol=" + symbol + "&timestamp=" + strconv.FormatInt(time.Now().Unix()*1000, 10)
 
-		fmt.Print(query_string)
+		//fmt.Print(query_string)
 
 		mac := hmac.New(sha256.New, []byte(API_SECRET))
 
@@ -656,7 +662,7 @@ func symbol_already_has_open_position_and_consider_closing_position(symbol strin
 
 		if symbol == position.Symbol && position_amount != 0.0 {
 
-			consider_closing_this_position(symbol, position.UpdateTime, position.PositionAmt)
+			// consider_closing_this_position(symbol, position.UpdateTime, position.PositionAmt)
 
 			close_position_when_profit_is_x_percentage(position.PositionAmt, position.EntryPrice)
 
