@@ -1,10 +1,10 @@
-This is a bot looks at the 1 hour chart and will:
+This is a bot looks at the 1 second chart and will:
 - trigger with market when conditions met.
-- create a stop loss at the same time with 3% distance (adjustable).
+- create a stop loss at the same time with 1% distance (adjustable).
 - will close position after 5 hours (adjustable).
 
 This bot will not:
-- open BUSD pair.
+- open pairs with BUSD pair.
 - open pair that has minimum quantity more than usd_per_trade (adjustable), see line 23.
   To ensure all pairs can be open, increase usd_per_trade.
 
